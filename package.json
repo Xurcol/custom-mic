@@ -1,6 +1,6 @@
 {
   "name": "custom-mic",
-  "version": "1.4.5",
+  "version": "1.4.6",
   "description": "Custom Mic - EQ, Soundpad and Spatial Audio for your microphone",
   "main": "main.js",
   "scripts": {

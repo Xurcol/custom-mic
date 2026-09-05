@@ -1274,7 +1274,7 @@ let meterRAF = null;
 
 function ensureCtx() {
   if (!audioCtx || audioCtx.state === 'closed') {
-    audioCtx = new AudioContext({ sampleRate: 48000, latencyHint: 'interactive' });
+    audioCtx = new AudioContext({ latencyHint: 'interactive' });
     registerPitchWorklet(audioCtx);
   }
   return audioCtx;
@@ -2022,7 +2022,7 @@ async function toggleMic(quiet = false) {
     if (ctx.state === 'suspended') await ctx.resume();
     if (pitchWorkletPromise) await pitchWorkletPromise;
     const inputId = document.getElementById('inputDevice').value;
-    const constraints = { audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, sampleRate: 48000 } };
+    const constraints = { audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } };
     if (inputId && inputId !== 'default') constraints.audio.deviceId = { exact: inputId };
     micStream = await navigator.mediaDevices.getUserMedia(constraints);
     watchMicTrack(micStream);
