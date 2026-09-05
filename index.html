@@ -206,6 +206,12 @@
     .tab-btn{padding:10px 24px;font-size:12px;font-weight:700;color:var(--text-muted);background:none;border:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .25s;letter-spacing:.02em;text-transform:uppercase}
     .tab-btn:hover{color:var(--header);background:rgba(255,255,255,.03)}
     .tab-btn.active{color:var(--brand);border-bottom-color:var(--brand)}
+    .subtab-bar{display:flex;gap:4px;margin:14px 0 12px;padding:3px;background:rgba(255,255,255,.03);border:1px solid var(--glass-border);border-radius:var(--radius-md)}
+    .subtab-btn{flex:1;padding:7px 14px;font-size:11px;font-weight:700;color:var(--text-muted);background:none;border:none;border-radius:calc(var(--radius-md) - 3px);cursor:pointer;transition:all .2s;letter-spacing:.02em}
+    .subtab-btn:hover{color:var(--header);background:rgba(255,255,255,.04)}
+    .subtab-btn.active{color:var(--brand);background:rgba(255,255,255,.07)}
+    .subtab-content{display:none}
+    .subtab-content.active{display:block}
     .tab-content{display:none;padding:20px 24px}
     .tab-content.active{display:block}
     /* Multi-column flow, not grid rows: sections pack tightly instead of
@@ -468,6 +474,16 @@
         <div style="font-size:10px;color:var(--text-muted);margin-top:8px">Tip: Use the built-in virtual cable above, or a third-party cable (VB-Cable, Voicemeeter) as the output to route EQ'd audio into Discord or any app.</div>
       </div>
 
+      <!-- Sub-navigation for the Custom Mic tab. The mic controls above stay
+           pinned; only the three heavy panels below swap. -->
+      <div class="subtab-bar">
+        <button class="subtab-btn active" data-subtab="soundpad" onclick="switchSubTab('soundpad')">SoundPad</button>
+        <button class="subtab-btn" data-subtab="eq" onclick="switchSubTab('eq')">EQ</button>
+        <button class="subtab-btn" data-subtab="presets" onclick="switchSubTab('presets')">Presets</button>
+      </div>
+
+      <div class="subtab-content active" id="sub-soundpad">
+
       <div class="soundpad-nowbar" id="soundpadNowbar">
         <div class="soundpad-nowrow">
           <span class="soundpad-nowtitle" id="soundpadNowTitle">No audio playing</span>
@@ -535,7 +551,9 @@
           <div class="soundpad-empty" id="soundpadEmpty">Drag &amp; drop audio files here</div>
         </div>
       </div>
+      </div>
 
+      <div class="subtab-content" id="sub-eq">
       <div class="eq-gain-row" style="margin-bottom:8px">
         <label>EQ Target:</label>
         <select id="eqTarget" onchange="eqChangeTarget()" style="background:#1a1b1e;color:var(--text);border:1px solid #303238;border-radius:4px;padding:4px 8px;font-size:12px;flex:1;max-width:160px"><option value="all">Mic + Music</option><option value="music">Music Only</option></select>
@@ -701,7 +719,9 @@
           <div class="eq-fx-slider"><label>Depth:</label><input type="range" id="eqTremoloDepth" min="0" max="1" step="0.01" value="0.5" oninput="eqChangeTremolo()"><span class="eq-fx-val" id="eqTremoloDepthVal">0.50</span></div>
         </div>
       </div>
+      </div>
 
+      <div class="subtab-content" id="sub-presets">
       <div>
         <div class="eq-section-title">Presets</div>
         <div class="eq-presets" id="eqPresets"></div>
@@ -731,6 +751,7 @@
           <button class="eq-custom-preset-btn" onclick="aiGeneratePreset()">Go</button>
         </div>
         <div id="aiResponse" style="font-size:11px;color:var(--text-muted);min-height:16px;padding:2px 0"></div>
+      </div>
       </div>
 
     </div>
@@ -1128,7 +1149,16 @@ function switchTab(tabId) {
   document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === 'tab-' + tabId));
   localStorage.setItem('active-tab', tabId);
 }
+function switchSubTab(subId) {
+  document.querySelectorAll('.subtab-btn').forEach(b => b.classList.toggle('active', b.dataset.subtab === subId));
+  document.querySelectorAll('.subtab-content').forEach(c => c.classList.toggle('active', c.id === 'sub-' + subId));
+  localStorage.setItem('active-subtab', subId);
+  // The EQ graph sizes itself from its container, which is zero-wide while the
+  // pane is hidden, so redraw once it is actually on screen.
+  if (subId === 'eq' && typeof eqDrawGraph === 'function') { try { eqDrawGraph(); } catch {} }
+}
 (function(){const t=localStorage.getItem('active-tab');if(t&&document.getElementById('tab-'+t))switchTab(t);else switchTab('soundpad');})();
+(function(){const s=localStorage.getItem('active-subtab');switchSubTab(s&&document.getElementById('sub-'+s)?s:'soundpad');})();
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 function showToast(msg, type = '') {
   const c = document.getElementById('toastContainer');
