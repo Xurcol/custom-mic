@@ -2138,6 +2138,10 @@ async function loadDevices() {
     const inputSel = document.getElementById('inputDevice');
     const outputSel = document.getElementById('outputDevice');
     const monitorSel = document.getElementById('monitorOutputDevice');
+    // Capture the live selection before the option lists are rebuilt.
+    const prevInputId = inputSel.value;
+    const prevOutputId = outputSel.value;
+    const prevMonitorId = monitorSel.value;
     audioDeviceLabels.input.clear();
     audioDeviceLabels.output.clear();
     inputSel.innerHTML = '';
@@ -2157,9 +2161,15 @@ async function loadDevices() {
         monitorSel.innerHTML += `<option value="${d.deviceId}">${esc(label)}</option>`;
       }
     });
-    if (savedInputDeviceId) { inputSel.value = savedInputDeviceId; }
-    if (savedOutputDeviceId) { outputSel.value = savedOutputDeviceId; selectedOutputId = savedOutputDeviceId; }
-    if (savedMonitorOutputDeviceId) { monitorSel.value = savedMonitorOutputDeviceId; selectedMonitorOutputId = savedMonitorOutputDeviceId; }
+    const restore = (sel, current, saved) => {
+      const has = id => id !== '' && Array.from(sel.options).some(o => o.value === id);
+      if (has(current)) { sel.value = current; return current; }
+      if (has(saved)) { sel.value = saved; return saved; }
+      return sel.value;
+    };
+    restore(inputSel, prevInputId, savedInputDeviceId);
+    selectedOutputId = restore(outputSel, prevOutputId, savedOutputDeviceId);
+    selectedMonitorOutputId = restore(monitorSel, prevMonitorId, savedMonitorOutputDeviceId);
     if (monitorEnabled && monitorOutputDuplicatesMain()) monitorEnabled = false;
     syncMonitorToggle();
     renderRouteMap();
@@ -2257,6 +2267,7 @@ let inputSwitchToken = 0;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 async function switchInputDevice() {
+  savedInputDeviceId = document.getElementById('inputDevice').value;
   eqSaveSettings();
   renderRouteMap();
   checkVoicemeeterLoop();
@@ -2278,6 +2289,7 @@ async function switchInputDevice() {
 
 function switchOutputDevice() {
   selectedOutputId = document.getElementById('outputDevice').value;
+  savedOutputDeviceId = selectedOutputId;
   if (monitorEnabled && monitorOutputDuplicatesMain()) {
     monitorEnabled = false;
     syncMonitorToggle();
@@ -2291,6 +2303,7 @@ function switchOutputDevice() {
 
 function switchMonitorOutput() {
   selectedMonitorOutputId = document.getElementById('monitorOutputDevice').value;
+  savedMonitorOutputDeviceId = selectedMonitorOutputId;
   if (monitorEnabled && monitorOutputDuplicatesMain()) {
     monitorEnabled = false;
     syncMonitorToggle();
