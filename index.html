@@ -2122,6 +2122,16 @@ function isVoicemeeterDevice(label) {
   return /voicemeeter|voice ?meeter/i.test(String(label || ''));
 }
 
+// Voicemeeter's endpoints sit in their own group so they never get mixed in
+// with real hardware in the pickers. Names are left exactly as Windows
+// reports them.
+function renderDeviceOptions(entries) {
+  const real = entries.filter(e => !e.vm);
+  const vm = entries.filter(e => e.vm);
+  const opts = list => list.map(e => `<option value="${e.id}">${esc(e.label)}</option>`).join('');
+  return opts(real) + (vm.length ? `<optgroup label="Voicemeeter">${opts(vm)}</optgroup>` : '');
+}
+
 
 async function loadDevices() {
   try {
@@ -2148,19 +2158,24 @@ async function loadDevices() {
     outputSel.innerHTML = '<option value="">Default Speaker</option>';
     monitorSel.innerHTML = '<option value="">Default Speaker</option>';
     audioDeviceLabels.output.set('', 'Default Speaker');
+    const inputEntries = [];
+    const outputEntries = [];
     devices.forEach(d => {
       const label = d.label || (d.kind === 'audioinput' ? 'Microphone' : 'Speaker');
       if (isHiddenAudioDevice(label)) return;
+      const entry = { id: d.deviceId, label, vm: isVoicemeeterDevice(label) };
       if (d.kind === 'audioinput') {
         audioDeviceLabels.input.set(d.deviceId, label);
-        inputSel.innerHTML += `<option value="${d.deviceId}">${esc(label)}</option>`;
+        inputEntries.push(entry);
       }
       if (d.kind === 'audiooutput') {
         audioDeviceLabels.output.set(d.deviceId, label);
-        outputSel.innerHTML += `<option value="${d.deviceId}">${esc(label)}</option>`;
-        monitorSel.innerHTML += `<option value="${d.deviceId}">${esc(label)}</option>`;
+        outputEntries.push(entry);
       }
     });
+    inputSel.innerHTML += renderDeviceOptions(inputEntries);
+    outputSel.innerHTML += renderDeviceOptions(outputEntries);
+    monitorSel.innerHTML += renderDeviceOptions(outputEntries);
     const restore = (sel, current, saved) => {
       const has = id => id !== '' && Array.from(sel.options).some(o => o.value === id);
       if (has(current)) { sel.value = current; return current; }
