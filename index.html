@@ -26,7 +26,7 @@
       radial-gradient(ellipse 50% 50% at 50% 50%,rgba(0,0,0,.1),transparent);
       pointer-events:none}
     body::after{content:'';position:fixed;inset:0;z-index:-1;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(255,255,255,.008) 2px,rgba(255,255,255,.008) 4px);pointer-events:none;opacity:.5}
-    #bgVideo{position:fixed;top:0;left:0;width:100vw;height:100vh;object-fit:cover;z-index:-2;opacity:.55;pointer-events:none;filter:saturate(1.2) contrast(1.1) brightness(.85)}
+    #bgVideo{position:fixed;top:0;left:0;width:100vw;height:100vh;object-fit:cover;z-index:-2;opacity:var(--bg-video-opacity,.55);pointer-events:none;filter:saturate(1.2) contrast(1.1) brightness(.85) blur(var(--bg-video-blur,0px))}
     button,input,select{transition:all .2s cubic-bezier(.4,0,.2,1)}
     ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(196,113,245,.2);border-radius:10px}::-webkit-scrollbar-thumb:hover{background:rgba(196,113,245,.35)}
 
@@ -212,6 +212,16 @@
     .subtab-btn.active{color:var(--brand);background:rgba(255,255,255,.07)}
     .subtab-content{display:none}
     .subtab-content.active{display:block}
+    .theme-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}
+    .theme-card{padding:10px;border:1px solid var(--card-border);border-radius:var(--radius-md);background:var(--card);cursor:pointer;transition:all .2s;text-align:left}
+    .theme-card:hover{border-color:var(--brand)}
+    .theme-card.active{border-color:var(--brand);box-shadow:0 0 0 1px var(--brand)}
+    .theme-card-name{font-size:11px;font-weight:700;color:var(--header);margin-bottom:6px}
+    .theme-card-dots{display:flex;gap:4px}
+    .theme-card-dot{width:14px;height:14px;border-radius:50%;border:1px solid rgba(255,255,255,.15)}
+    .theme-custom-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+    .theme-swatch-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;background:var(--card);border:1px solid var(--card-border);border-radius:var(--radius-sm);font-size:11px;color:var(--text)}
+    .theme-swatch-row input[type=color]{width:34px;height:22px;padding:0;border:1px solid var(--glass-border);border-radius:4px;background:none;cursor:pointer}
     .tab-content{display:none;padding:20px 24px}
     .tab-content.active{display:block}
     /* Multi-column flow, not grid rows: sections pack tightly instead of
@@ -413,6 +423,7 @@
       <button class="tab-btn" data-tab="obs" onclick="switchTab('obs')">Camera</button>
       <button class="tab-btn" data-tab="voicemod" onclick="switchTab('voicemod')">AI Voice Changer</button>
       <button class="tab-btn" data-tab="recorder" onclick="switchTab('recorder')">Screen Recorder</button>
+      <button class="tab-btn" data-tab="themes" onclick="switchTab('themes')">Themes</button>
     </div>
 
     <!-- Soundpad Tab -->
@@ -425,6 +436,11 @@
           <span class="mic-status" id="micStatus">Not active</span>
         </div>
         <div class="mic-meter"><div class="mic-meter-fill" id="micMeter"></div></div>
+        <div class="eq-gain-row" style="margin:8px 0 0">
+          <label>Mic Volume</label>
+          <input type="range" id="micVolumeSlider" min="0" max="200" step="1" value="100">
+          <span class="eq-gain-val" id="micVolumeVal">100%</span>
+        </div>
         <div class="output-select">
           <label>Input Device:</label>
           <select id="inputDevice" onchange="switchInputDevice()"></select>
@@ -433,6 +449,15 @@
           <label>Main Output Device:</label>
           <select id="outputDevice" onchange="switchOutputDevice()"></select>
         </div>
+        <div class="output-select">
+          <label>Sample Rate:</label>
+          <select id="sampleRateSelect" onchange="applySampleRate()">
+            <option value="48000">48000 Hz</option>
+            <option value="44100">44100 Hz</option>
+            <option value="">Follow hardware</option>
+          </select>
+        </div>
+        <div id="sampleRateNote" style="font-size:9px;color:var(--text-muted);margin:-2px 0 4px"></div>
         <div class="monitor-row">
           <label for="monitorToggle">Monitor</label>
           <button class="eq-fx-toggle" id="monitorToggle" onclick="toggleMonitor()" title="Hear the same processed audio on a separate output"></button>
@@ -441,6 +466,7 @@
           <label>Monitor Output:</label>
           <select id="monitorOutputDevice" onchange="switchMonitorOutput()"></select>
         </div>
+        <div id="micExtras" hidden>
         <div class="route-tools">
           <div class="route-actions">
             <button class="mini-btn" onclick="applyDiscordCableSetup()">Wizard</button>
@@ -472,13 +498,13 @@
           <div id="vaudioNote" style="font-size:9px;color:var(--text-muted);margin-top:6px;display:none"></div>
         </div>
         <div style="font-size:10px;color:var(--text-muted);margin-top:8px">Tip: Use the built-in virtual cable above, or a third-party cable (VB-Cable, Voicemeeter) as the output to route EQ'd audio into Discord or any app.</div>
+        </div>
       </div>
 
       <!-- Sub-navigation for the Custom Mic tab. The mic controls above stay
-           pinned; only the three heavy panels below swap. -->
+           pinned; only the panels below swap. -->
       <div class="subtab-bar">
-        <button class="subtab-btn active" data-subtab="soundpad" onclick="switchSubTab('soundpad')">SoundPad</button>
-        <button class="subtab-btn" data-subtab="eq" onclick="switchSubTab('eq')">EQ</button>
+        <button class="subtab-btn active" data-subtab="soundpad" onclick="switchSubTab('soundpad')">SoundPad + DJ</button>
         <button class="subtab-btn" data-subtab="presets" onclick="switchSubTab('presets')">Presets</button>
       </div>
 
@@ -515,7 +541,7 @@
       </div>
 
       <div class="eq-gain-row" style="margin:10px 0 0">
-        <label>Volume</label>
+        <label>Music Volume</label>
         <button class="top-transport" id="topPlayPauseBtn" onclick="soundpadToggleTransport()" title="Play / pause soundpad">&#9654;</button>
         <input type="range" id="eqVolumeSlider" min="0" max="200" step="1" value="100">
         <button onclick="obnoxiousMode()" style="background:linear-gradient(135deg,#ff0040,#ff6600,#ffcc00);border:none;color:#000;font-weight:900;font-size:10px;padding:2px 8px;border-radius:4px;cursor:pointer;text-transform:uppercase;letter-spacing:.5px" title="MAX VOLUME">BOOST</button>
@@ -551,9 +577,6 @@
           <div class="soundpad-empty" id="soundpadEmpty">Drag &amp; drop audio files here</div>
         </div>
       </div>
-      </div>
-
-      <div class="subtab-content" id="sub-eq">
       <div class="eq-gain-row" style="margin-bottom:8px">
         <label>EQ Target:</label>
         <select id="eqTarget" onchange="eqChangeTarget()" style="background:#1a1b1e;color:var(--text);border:1px solid #303238;border-radius:4px;padding:4px 8px;font-size:12px;flex:1;max-width:160px"><option value="all">Mic + Music</option><option value="music">Music Only</option></select>
@@ -754,6 +777,46 @@
       </div>
       </div>
 
+    </div>
+
+    <!-- Themes Tab -->
+    <div class="tab-content" id="tab-themes">
+      <div class="mic-section">
+        <h3>Colour Theme</h3>
+        <div class="theme-grid" id="themePresetGrid"></div>
+
+        <div class="eq-section-title" style="margin-top:16px">Custom Colours</div>
+        <div class="theme-custom-grid">
+          <label class="theme-swatch-row"><span>Accent</span><input type="color" id="themeBrand" oninput="themeSetCustom()"></label>
+          <label class="theme-swatch-row"><span>Background</span><input type="color" id="themeBg" oninput="themeSetCustom()"></label>
+          <label class="theme-swatch-row"><span>Panels</span><input type="color" id="themeCard" oninput="themeSetCustom()"></label>
+          <label class="theme-swatch-row"><span>Text</span><input type="color" id="themeText" oninput="themeSetCustom()"></label>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+          <button class="mini-btn" onclick="themeReset()">Reset to Default</button>
+        </div>
+      </div>
+
+      <div class="mic-section" style="margin-top:12px">
+        <h3>Background Video</h3>
+        <div style="font-size:10px;color:var(--text-muted);margin-bottom:8px">Plays behind the whole app, muted and looping. Any video file works.</div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <button class="mini-btn" onclick="themePickBackgroundVideo()">Choose Video</button>
+          <button class="mini-btn" onclick="themeResetBackgroundVideo()">Use Default</button>
+          <button class="mini-btn danger" onclick="themeClearBackgroundVideo()">No Video</button>
+        </div>
+        <div id="themeBgVideoName" style="font-size:10px;color:var(--text-muted);margin-top:6px"></div>
+        <div class="eq-gain-row" style="margin-top:10px">
+          <label>Opacity</label>
+          <input type="range" id="themeBgOpacity" min="0" max="100" step="1" value="55" oninput="themeSetBgOpacity()">
+          <span class="eq-gain-val" id="themeBgOpacityVal">55%</span>
+        </div>
+        <div class="eq-gain-row">
+          <label>Blur</label>
+          <input type="range" id="themeBgBlur" min="0" max="20" step="1" value="0" oninput="themeSetBgOpacity()">
+          <span class="eq-gain-val" id="themeBgBlurVal">0px</span>
+        </div>
+      </div>
     </div>
 
     <!-- Equalizer APO Tab -->
@@ -1149,13 +1212,209 @@ function switchTab(tabId) {
   document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === 'tab-' + tabId));
   localStorage.setItem('active-tab', tabId);
 }
+// ── Theming ──
+// Only a handful of variables actually carry a theme's identity; the rest of
+// :root is derived from them, so a preset sets these four and the glows and
+// tints are computed to match.
+const THEME_PRESETS = {
+  purple:  { name: 'Purple',  brand: '#c471f5', accent: '#f472b6', bg: '#050608', card: '#ffffff', text: '#d8dae0' },
+  blue:    { name: 'Ocean',   brand: '#38bdf8', accent: '#818cf8', bg: '#04070d', card: '#ffffff', text: '#d5dee8' },
+  green:   { name: 'Matrix',  brand: '#34d399', accent: '#a3e635', bg: '#030805', card: '#ffffff', text: '#d2e3d8' },
+  ember:   { name: 'Ember',   brand: '#fb923c', accent: '#f87171', bg: '#0a0503', card: '#ffffff', text: '#e6dcd4' },
+  crimson: { name: 'Crimson', brand: '#f87171', accent: '#fb7185', bg: '#0a0304', card: '#ffffff', text: '#e8d8da' },
+  mono:    { name: 'Mono',    brand: '#9ca3af', accent: '#d1d5db', bg: '#060708', card: '#ffffff', text: '#d6d8dc' },
+  midnight:{ name: 'Midnight',brand: '#6366f1', accent: '#8b5cf6', bg: '#03040a', card: '#ffffff', text: '#d3d5e4' },
+  gold:    { name: 'Gold',    brand: '#fbbf24', accent: '#fcd34d', bg: '#0a0803', card: '#ffffff', text: '#e6e0d0' },
+};
+
+let currentTheme = { preset: 'purple', ...THEME_PRESETS.purple };
+let bgVideoSettings = { path: '', opacity: 55, blur: 0 };
+
+function hexToRgb(hex) {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(String(hex || ''));
+  if (!m) return { r: 196, g: 113, b: 245 };
+  return { r: parseInt(m[1], 16), g: parseInt(m[2], 16), b: parseInt(m[3], 16) };
+}
+
+function rgba(hex, alpha) {
+  const { r, g, b } = hexToRgb(hex);
+  return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+}
+
+// Nudge a colour toward white or black. Used to derive hover states from the
+// accent rather than storing a second colour for every theme.
+function shade(hex, amount) {
+  const { r, g, b } = hexToRgb(hex);
+  const mix = (c) => Math.round(amount > 0 ? c + (255 - c) * amount : c * (1 + amount));
+  const hx = (c) => Math.max(0, Math.min(255, c)).toString(16).padStart(2, '0');
+  return '#' + hx(mix(r)) + hx(mix(g)) + hx(mix(b));
+}
+
+function themeApply(theme) {
+  const root = document.documentElement.style;
+  const t = { ...currentTheme, ...theme };
+  currentTheme = t;
+
+  root.setProperty('--brand', t.brand);
+  root.setProperty('--brand-h', shade(t.brand, -0.15));
+  root.setProperty('--brand-glow', rgba(t.brand, 0.35));
+  root.setProperty('--accent', t.accent);
+  root.setProperty('--accent-glow', rgba(t.accent, 0.3));
+  root.setProperty('--bg-selected', rgba(t.brand, 0.14));
+  root.setProperty('--shadow-glow', '0 0 40px ' + rgba(t.brand, 0.08));
+  root.setProperty('--text', t.text);
+  root.setProperty('--header', shade(t.text, 0.35));
+  root.setProperty('--header2', shade(t.text, -0.2));
+  root.setProperty('--card', rgba(t.card, 0.035));
+  root.setProperty('--card-hover', rgba(t.card, 0.065));
+  root.setProperty('--card-border', rgba(t.card, 0.08));
+  document.body.style.background = t.bg;
+
+  themeRenderPresets();
+  themeSyncPickers();
+  themeSave();
+}
+
+function themeRenderPresets() {
+  const grid = document.getElementById('themePresetGrid');
+  if (!grid) return;
+  grid.innerHTML = Object.entries(THEME_PRESETS).map(([key, t]) => {
+    const active = currentTheme.preset === key ? ' active' : '';
+    return '<button class="theme-card' + active + '" onclick="themeUsePreset(\'' + key + '\')">' +
+      '<div class="theme-card-name">' + esc(t.name) + '</div>' +
+      '<div class="theme-card-dots">' +
+        '<span class="theme-card-dot" style="background:' + t.brand + '"></span>' +
+        '<span class="theme-card-dot" style="background:' + t.accent + '"></span>' +
+        '<span class="theme-card-dot" style="background:' + t.bg + '"></span>' +
+      '</div></button>';
+  }).join('');
+}
+
+function themeSyncPickers() {
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+  set('themeBrand', currentTheme.brand);
+  set('themeBg', currentTheme.bg);
+  set('themeCard', currentTheme.card);
+  set('themeText', currentTheme.text);
+}
+
+function themeUsePreset(key) {
+  const preset = THEME_PRESETS[key];
+  if (!preset) return;
+  themeApply({ preset: key, ...preset });
+}
+
+function themeSetCustom() {
+  themeApply({
+    preset: 'custom',
+    brand: document.getElementById('themeBrand').value,
+    bg: document.getElementById('themeBg').value,
+    card: document.getElementById('themeCard').value,
+    text: document.getElementById('themeText').value,
+    accent: currentTheme.accent,
+  });
+}
+
+function themeReset() {
+  themeUsePreset('purple');
+}
+
+function themeSave() {
+  try {
+    localStorage.setItem('custom-mic-theme', JSON.stringify(currentTheme));
+    localStorage.setItem('custom-mic-bgvideo', JSON.stringify(bgVideoSettings));
+  } catch {}
+}
+
+/* ── background video ── */
+
+function themeApplyBgVideo() {
+  const vid = document.getElementById('bgVideo');
+  const label = document.getElementById('themeBgVideoName');
+  document.documentElement.style.setProperty('--bg-video-opacity', bgVideoSettings.opacity / 100);
+  document.documentElement.style.setProperty('--bg-video-blur', bgVideoSettings.blur + 'px');
+  if (vid) {
+    if (bgVideoSettings.path === null) {
+      vid.style.display = 'none';
+    } else {
+      vid.style.display = '';
+      const want = bgVideoSettings.path || 'bg.mp4';
+      // A chosen file lives outside the app directory, so it needs a file URL.
+      const src = want === 'bg.mp4' ? 'bg.mp4' : 'file:///' + want.replace(/\\/g, '/');
+      if (vid.getAttribute('src') !== src) { vid.setAttribute('src', src); vid.load(); vid.play().catch(() => {}); }
+    }
+  }
+  if (label) {
+    label.textContent = bgVideoSettings.path === null ? 'No background video'
+      : bgVideoSettings.path ? bgVideoSettings.path.split(/[/\\]/).pop()
+      : 'Default (bg.mp4)';
+  }
+  const op = document.getElementById('themeBgOpacity');
+  if (op) op.value = bgVideoSettings.opacity;
+  const opv = document.getElementById('themeBgOpacityVal');
+  if (opv) opv.textContent = bgVideoSettings.opacity + '%';
+  const bl = document.getElementById('themeBgBlur');
+  if (bl) bl.value = bgVideoSettings.blur;
+  const blv = document.getElementById('themeBgBlurVal');
+  if (blv) blv.textContent = bgVideoSettings.blur + 'px';
+  themeSave();
+}
+
+async function themePickBackgroundVideo() {
+  try {
+    const files = await window.api.selectVideoFiles();
+    if (!files || !files.length) return;
+    bgVideoSettings.path = files[0].path;
+    themeApplyBgVideo();
+  } catch (e) {
+    showToast('Could not load that video: ' + e.message, 'error');
+  }
+}
+
+function themeResetBackgroundVideo() {
+  bgVideoSettings.path = '';
+  themeApplyBgVideo();
+}
+
+function themeClearBackgroundVideo() {
+  bgVideoSettings.path = null;
+  themeApplyBgVideo();
+}
+
+function themeSetBgOpacity() {
+  bgVideoSettings.opacity = parseInt(document.getElementById('themeBgOpacity').value);
+  bgVideoSettings.blur = parseInt(document.getElementById('themeBgBlur').value);
+  themeApplyBgVideo();
+}
+
+(function themeInit() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('custom-mic-theme') || 'null');
+    if (saved && saved.brand) currentTheme = { ...currentTheme, ...saved };
+  } catch {}
+  try {
+    const savedBg = JSON.parse(localStorage.getItem('custom-mic-bgvideo') || 'null');
+    if (savedBg) bgVideoSettings = { ...bgVideoSettings, ...savedBg };
+  } catch {}
+  themeApply(currentTheme);
+  themeApplyBgVideo();
+})();
+
+// The route map, profile row, wizard buttons and cable installer are hidden
+// by default. Set this to true to show them again.
+const micExtrasVisible = false;
+(function applyMicExtras() {
+  const el = document.getElementById('micExtras');
+  if (el) el.hidden = !micExtrasVisible;
+})();
+
 function switchSubTab(subId) {
   document.querySelectorAll('.subtab-btn').forEach(b => b.classList.toggle('active', b.dataset.subtab === subId));
   document.querySelectorAll('.subtab-content').forEach(c => c.classList.toggle('active', c.id === 'sub-' + subId));
   localStorage.setItem('active-subtab', subId);
   // The EQ graph sizes itself from its container, which is zero-wide while the
   // pane is hidden, so redraw once it is actually on screen.
-  if (subId === 'eq' && typeof eqDrawGraph === 'function') { try { eqDrawGraph(); } catch {} }
+  if (subId === 'soundpad' && typeof eqDrawGraph === 'function') { try { eqDrawGraph(); } catch {} }
 }
 (function(){const t=localStorage.getItem('active-tab');if(t&&document.getElementById('tab-'+t))switchTab(t);else switchTab('soundpad');})();
 (function(){const s=localStorage.getItem('active-subtab');switchSubTab(s&&document.getElementById('sub-'+s)?s:'soundpad');})();
@@ -1241,11 +1500,19 @@ function clampPitchSemis(value) {
 }
 let eqDragging = null;
 let eqActivePreset = 'flat';
-let volume = 100;
+let volume = 100;   // music / soundpad level
+let micVolume = 100; // mic level, independent so Mic + Music can be balanced
+
+// Which level a chain runs at depends on what it carries.
+function chainVolume(isMic) {
+  return isMic ? micVolume : volume;
+}
 let bypassProcessing = false;
 
 // ── Audio Engine ──
 let audioCtx = null;
+// '' means follow the hardware; otherwise an explicit rate in Hz.
+let preferredSampleRate = 48000;
 let micStream = null;
 let micSource = null;
 let micActive = false;
@@ -1274,10 +1541,50 @@ let meterRAF = null;
 
 function ensureCtx() {
   if (!audioCtx || audioCtx.state === 'closed') {
-    audioCtx = new AudioContext({ latencyHint: 'interactive' });
+    const opts = { latencyHint: 'interactive' };
+    if (preferredSampleRate) opts.sampleRate = preferredSampleRate;
+    try {
+      audioCtx = new AudioContext(opts);
+    } catch {
+      // A device that cannot run at the requested rate throws; fall back to
+      // whatever it does support rather than leaving the app with no context.
+      audioCtx = new AudioContext({ latencyHint: 'interactive' });
+    }
     registerPitchWorklet(audioCtx);
   }
   return audioCtx;
+}
+
+// Changing the rate means a new AudioContext, so everything hanging off the
+// old one has to be rebuilt.
+async function applySampleRate() {
+  const sel = document.getElementById('sampleRateSelect');
+  preferredSampleRate = sel.value ? parseInt(sel.value) : '';
+  eqSaveSettings();
+
+  const wasMicOn = micActive;
+  if (micActive) stopMic();
+  tearDownOutputBus();
+  const old = audioCtx;
+  audioCtx = null;
+  pitchWorkletPromise = null;
+  pitchWorkletContext = null;
+  pitchWorkletReady = false;
+  try { await old?.close(); } catch {}
+
+  const ctx = ensureCtx();
+  if (pitchWorkletPromise) await pitchWorkletPromise;
+  if (wasMicOn) await toggleMic();
+  rebuildSoundpad();
+  showToast('Audio engine now at ' + Math.round(ctx.sampleRate) + ' Hz.', '');
+  syncSampleRateUI();
+}
+
+function syncSampleRateUI() {
+  const sel = document.getElementById('sampleRateSelect');
+  if (sel) sel.value = preferredSampleRate ? String(preferredSampleRate) : '';
+  const note = document.getElementById('sampleRateNote');
+  if (note) note.textContent = audioCtx ? 'Engine running at ' + Math.round(audioCtx.sampleRate) + ' Hz' : '';
 }
 
 function registerPitchWorklet(ctx) {
@@ -1441,7 +1748,7 @@ function buildChain(source, ctx, dest, opts) {
     gain.channelCount = 2;
     gain.channelCountMode = 'explicit';
     gain.channelInterpretation = 'speakers';
-    gain.gain.value = Math.max(0, volume / 100);
+    gain.gain.value = Math.max(0, chainVolume(opts?.isMic) / 100);
     const analyser = ctx.createAnalyser();
     analyser.channelCount = 2;
     analyser.channelCountMode = 'explicit';
@@ -1452,6 +1759,7 @@ function buildChain(source, ctx, dest, opts) {
     analyser.connect(dest);
     nodes.push(gain, analyser);
     nodes._mainGain = gain;
+    nodes._isMic = !!opts?.isMic;
     nodes._rawBypass = true;
     nodes._levelAnalyser = analyser;
     return nodes;
@@ -1585,11 +1893,13 @@ function buildChain(source, ctx, dest, opts) {
   }
 
   const gain = ctx.createGain();
-  gain.gain.value = eqGain * (volume / 100);
+  gain.gain.value = eqGain * (chainVolume(opts?.isMic) / 100);
   current.connect(gain);
   current = gain;
   nodes.push(gain);
   nodes._mainGain = gain;
+  // Remembered so live level updates know which slider owns this chain.
+  nodes._isMic = !!opts?.isMic;
 
   if (eq8D?.on) {
     const listener = ctx.listener;
@@ -1806,7 +2116,7 @@ function updateChainLevel(nodes, immediate = false) {
   if (!gain) return false;
   const ctx = gain.context || audioCtx;
   const now = ctx?.currentTime || 0;
-  const nextLevel = Math.max(0, (nodes?._rawBypass ? 1 : eqGain) * (volume / 100));
+  const nextLevel = Math.max(0, (nodes?._rawBypass ? 1 : eqGain) * (chainVolume(nodes?._isMic) / 100));
   try {
     gain.gain.cancelScheduledValues(now);
     gain.gain.setTargetAtTime(nextLevel, now, immediate ? 0.001 : 0.018);
@@ -3703,6 +4013,11 @@ function eqSyncUI() {
   document.getElementById('eqGainVal').textContent = eqGain.toFixed(2);
   document.getElementById('eqVolumeSlider').value = volume;
   document.getElementById('eqVolumeVal').textContent = volume + '%';
+  syncSampleRateUI();
+  const micSlider = document.getElementById('micVolumeSlider');
+  if (micSlider) micSlider.value = micVolume;
+  const micVal = document.getElementById('micVolumeVal');
+  if (micVal) micVal.textContent = micVolume + '%';
   document.getElementById('eqEnabled').checked = eqEnabled;
   document.getElementById('monitorToggle')?.classList.toggle('on', monitorEnabled);
   document.getElementById('monitorOutputWrap')?.classList.toggle('active', monitorEnabled);
@@ -3774,6 +4089,12 @@ document.getElementById('eqGainSlider').addEventListener('input', function() {
 document.getElementById('eqVolumeSlider').addEventListener('input', function() {
   volume = parseInt(this.value);
   document.getElementById('eqVolumeVal').textContent = volume + '%';
+  updateLiveLevels(); eqSaveSettings();
+});
+
+document.getElementById('micVolumeSlider')?.addEventListener('input', function() {
+  micVolume = parseInt(this.value);
+  document.getElementById('micVolumeVal').textContent = micVolume + '%';
   updateLiveLevels(); eqSaveSettings();
 });
 
@@ -4156,7 +4477,7 @@ document.addEventListener('mouseup', () => { if (eqDragging !== null) { document
 
 // ── Persistence ──
 function eqSaveSettings() {
-  try { localStorage.setItem('xeq-settings', JSON.stringify({ bands: eqBands, gain: eqGain, enabled: eqEnabled, pitch: eqPitch, speed: eqSpeed, '8d': eq8D, stereo: eqStereo, comp: eqComp, gate: eqGate, deEss: eqDeEss, dist: eqDist, delay: eqDelay, tremolo: eqTremolo, reverb: eqReverb, bass: eqBass, preset: eqActivePreset, volume, bypassProcessing, monitorEnabled, inputDeviceId: document.getElementById('inputDevice')?.value || '', outputDeviceId: document.getElementById('outputDevice')?.value || '', monitorOutputDeviceId: document.getElementById('monitorOutputDevice')?.value || '', eqTarget })); } catch {}
+  try { localStorage.setItem('xeq-settings', JSON.stringify({ bands: eqBands, gain: eqGain, enabled: eqEnabled, pitch: eqPitch, speed: eqSpeed, '8d': eq8D, stereo: eqStereo, comp: eqComp, gate: eqGate, deEss: eqDeEss, dist: eqDist, delay: eqDelay, tremolo: eqTremolo, reverb: eqReverb, bass: eqBass, preset: eqActivePreset, volume, micVolume, preferredSampleRate, bypassProcessing, monitorEnabled, inputDeviceId: document.getElementById('inputDevice')?.value || '', outputDeviceId: document.getElementById('outputDevice')?.value || '', monitorOutputDeviceId: document.getElementById('monitorOutputDevice')?.value || '', eqTarget })); } catch {}
 }
 
 function eqLoadSettings() {
@@ -4179,6 +4500,8 @@ function eqLoadSettings() {
     if (s.bass) eqBass = { ...eqBass, ...s.bass };
     if (s.preset) eqActivePreset = s.preset;
     if (s.volume !== undefined) volume = s.volume;
+    if (s.micVolume !== undefined) micVolume = Math.max(0, Math.min(200, s.micVolume));
+    if (s.preferredSampleRate !== undefined) preferredSampleRate = s.preferredSampleRate;
     if (s.bypassProcessing !== undefined) bypassProcessing = !!s.bypassProcessing;
     if (s.monitorEnabled !== undefined) monitorEnabled = !!s.monitorEnabled;
     if (s.inputDeviceId) savedInputDeviceId = s.inputDeviceId;
