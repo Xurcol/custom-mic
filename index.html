@@ -2025,6 +2025,7 @@ async function toggleMic(quiet = false) {
     const constraints = { audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, sampleRate: 48000 } };
     if (inputId && inputId !== 'default') constraints.audio.deviceId = { exact: inputId };
     micStream = await navigator.mediaDevices.getUserMedia(constraints);
+    watchMicTrack(micStream);
     micSource = ctx.createMediaStreamSource(micStream);
     micAnalyser = ctx.createAnalyser();
     micAnalyser.fftSize = 256;
@@ -2039,6 +2040,7 @@ async function toggleMic(quiet = false) {
     document.getElementById('micBtn').textContent = 'Stop Mic';
     document.getElementById('micStatus').textContent = 'Processing...';
     startMicMeter();
+    startMicHealthWatch();
   } catch (e) {
     if (!quiet) showToast('Mic error: ' + e.message, 'error');
   }
@@ -2046,6 +2048,7 @@ async function toggleMic(quiet = false) {
 
 function stopMic() {
   micActive = false;
+  stopMicHealthWatch();
   if (micSource) try { micSource.disconnect(); } catch {}
   cleanupOutputAudio(micNodes);
   disconnectNodes(micNodes);
@@ -2122,8 +2125,16 @@ function isVoicemeeterDevice(label) {
 
 async function loadDevices() {
   try {
-    await navigator.mediaDevices.getUserMedia({ audio: true });
-    const devices = await navigator.mediaDevices.enumerateDevices();
+    // enumerateDevices() only returns labels once mic permission is granted,
+    // so prime it with a throwaway capture — but only when we actually need to.
+    // Doing it while the mic is running opens a second capture on the default
+    // device, which is exactly what we must not do during a reconnect.
+    let devices = await navigator.mediaDevices.enumerateDevices();
+    if (!micActive && devices.some(d => d.kind === 'audioinput' && !d.label)) {
+      const probe = await navigator.mediaDevices.getUserMedia({ audio: true });
+      probe.getTracks().forEach(t => t.stop());
+      devices = await navigator.mediaDevices.enumerateDevices();
+    }
     const inputSel = document.getElementById('inputDevice');
     const outputSel = document.getElementById('outputDevice');
     const monitorSel = document.getElementById('monitorOutputDevice');
@@ -2168,6 +2179,77 @@ function checkVoicemeeterLoop() {
   if (voicemeeterLoopWarned) return;
   voicemeeterLoopWarned = true;
   showToast('Input and output are both Voicemeeter — that loops audio back through it. Pick your real mic as the input.', 'error');
+}
+
+// ── Endpoint-reset recovery ──
+// An APO reload (Equalizer APO's config being saved, a device format change,
+// a driver restart) invalidates the capture track and the render sink without
+// surfacing an error. These watchers rebuild the whole chain when that happens.
+let micRestartPending = false;
+let micHealthTimer = null;
+
+function watchMicTrack(stream) {
+  const track = stream?.getAudioTracks?.()[0];
+  if (!track) return;
+  track.addEventListener('ended', () => restartMicChain('the input device was reset'));
+  // A mute that never unmutes is the usual shape of an APO reload. A brief
+  // mute is normal, so give it a moment before tearing anything down.
+  track.addEventListener('mute', () => {
+    setTimeout(() => {
+      if (micActive && track.muted && stream === micStream) restartMicChain('the input device was reset');
+    }, 600);
+  });
+}
+
+// Rebuild input and output together: the render sink is torn down by the same
+// endpoint reset, so restarting only the capture side leaves it silent.
+async function restartMicChain(reason) {
+  if (!micActive || micRestartPending) return;
+  micRestartPending = true;
+  try {
+    document.getElementById('micStatus').textContent = 'Reconnecting...';
+    stopMic();
+    tearDownOutputBus();
+    const token = ++inputSwitchToken;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      await sleep(attempt === 0 ? 400 : 400 + 300 * attempt);
+      if (token !== inputSwitchToken) return;
+      await loadDevices();
+      await toggleMic(attempt < 4);
+      if (micActive) {
+        showToast('Reconnected after ' + reason + '.', '');
+        return;
+      }
+    }
+  } finally {
+    micRestartPending = false;
+  }
+}
+
+// Endpoints appearing or disappearing is the other way an APO reload shows up.
+if (navigator.mediaDevices) {
+  navigator.mediaDevices.addEventListener('devicechange', async () => {
+    await loadDevices();
+    if (!micActive) return;
+    const track = micStream?.getAudioTracks?.()[0];
+    if (!track || track.readyState !== 'live') restartMicChain('an audio device change');
+  });
+}
+
+// Backstop for the cases that fire no event at all: poll the track's state
+// while the mic is running.
+function startMicHealthWatch() {
+  stopMicHealthWatch();
+  micHealthTimer = setInterval(() => {
+    if (!micActive) return;
+    const track = micStream?.getAudioTracks?.()[0];
+    if (!track || track.readyState !== 'live') restartMicChain('the input device dropping out');
+  }, 2000);
+}
+
+function stopMicHealthWatch() {
+  if (micHealthTimer) clearInterval(micHealthTimer);
+  micHealthTimer = null;
 }
 
 let inputSwitchToken = 0;
