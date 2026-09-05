@@ -73,6 +73,7 @@ public:
     LONG m_ref;
     CVCamFilter* m_filter;
     IPin* m_connected;
+    CRITICAL_SECTION m_lock;   // guards m_connected against Disconnect racing PushLoop
     AM_MEDIA_TYPE m_mt;
     HANDLE m_thread;
     HANDLE m_stopEvent;

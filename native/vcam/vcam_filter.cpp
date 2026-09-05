@@ -131,6 +131,7 @@ STDMETHODIMP CEnumMediaTypes::Clone(IEnumMediaTypes** pp) { *pp = new CEnumMedia
 CVCamPin::CVCamPin(CVCamFilter* f)
     : m_ref(1), m_filter(f), m_connected(NULL), m_thread(NULL), m_stopEvent(NULL),
       m_flushing(false), m_shmHandle(NULL), m_shmPtr(NULL), m_lastFrameIndex(-1) {
+    InitializeCriticalSection(&m_lock);
     ZeroMemory(&m_mt, sizeof(m_mt));
     FillMediaType(&m_mt);
     m_stopEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
@@ -141,6 +142,26 @@ CVCamPin::~CVCamPin() {
     FreeMediaType(m_mt);
     if (m_connected) m_connected->Release();
     if (m_stopEvent) CloseHandle(m_stopEvent);
+    DeleteCriticalSection(&m_lock);
+}
+
+// The pin publishes exactly one format and the push loop writes exactly one
+// frame size. Accepting anything else - a different resolution in particular -
+// leaves the downstream allocator sized for the negotiated type while we keep
+// writing FRAME_WIDTH*FRAME_HEIGHT*3 bytes into it, which corrupts the heap of
+// whichever process hosts the graph.
+static bool IsOurFormat(const AM_MEDIA_TYPE* pmt) {
+    if (!pmt) return false;
+    if (pmt->majortype != MEDIATYPE_Video) return false;
+    if (pmt->subtype != MEDIASUBTYPE_RGB24) return false;
+    if (pmt->formattype != FORMAT_VideoInfo) return false;
+    if (!pmt->pbFormat || pmt->cbFormat < sizeof(VIDEOINFOHEADER)) return false;
+    const VIDEOINFOHEADER* vih = (const VIDEOINFOHEADER*)pmt->pbFormat;
+    if (vih->bmiHeader.biWidth != FRAME_WIDTH) return false;
+    if (abs(vih->bmiHeader.biHeight) != FRAME_HEIGHT) return false;
+    if (vih->bmiHeader.biBitCount != 24) return false;
+    if (vih->bmiHeader.biCompression != BI_RGB) return false;
+    return true;
 }
 
 void CVCamPin::FillMediaType(AM_MEDIA_TYPE* pmt) {
@@ -181,19 +202,21 @@ STDMETHODIMP CVCamPin::Connect(IPin* pReceivePin, const AM_MEDIA_TYPE* pmt) {
     if (!pReceivePin) return E_POINTER;
     if (m_connected) return VFW_E_ALREADY_CONNECTED;
 
+    // A partial or mismatched type is refused rather than negotiated: we have
+    // one format, and pretending otherwise is what corrupts the client's heap.
+    if (pmt && !IsOurFormat(pmt)) return VFW_E_TYPE_NOT_ACCEPTED;
+
     AM_MEDIA_TYPE proposed;
-    if (pmt) {
-        CopyMediaType(&proposed, pmt);
-    } else {
-        FillMediaType(&proposed);
-    }
+    FillMediaType(&proposed);
 
     HRESULT hr = pReceivePin->ReceiveConnection(static_cast<IPin*>(this), &proposed);
     if (SUCCEEDED(hr)) {
+        EnterCriticalSection(&m_lock);
         FreeMediaType(m_mt);
         CopyMediaType(&m_mt, &proposed);
         m_connected = pReceivePin;
         m_connected->AddRef();
+        LeaveCriticalSection(&m_lock);
     }
     FreeMediaType(proposed);
     return hr;
@@ -202,9 +225,12 @@ STDMETHODIMP CVCamPin::Connect(IPin* pReceivePin, const AM_MEDIA_TYPE* pmt) {
 STDMETHODIMP CVCamPin::ReceiveConnection(IPin*, const AM_MEDIA_TYPE*) { return E_UNEXPECTED; }
 
 STDMETHODIMP CVCamPin::Disconnect() {
-    if (!m_connected) return S_FALSE;
-    m_connected->Release();
+    EnterCriticalSection(&m_lock);
+    IPin* old = m_connected;
     m_connected = NULL;
+    LeaveCriticalSection(&m_lock);
+    if (!old) return S_FALSE;
+    old->Release();
     return S_OK;
 }
 
@@ -223,6 +249,7 @@ STDMETHODIMP CVCamPin::ConnectionMediaType(AM_MEDIA_TYPE* pmt) {
 }
 
 STDMETHODIMP CVCamPin::QueryPinInfo(PIN_INFO* pInfo) {
+    if (!pInfo) return E_POINTER;
     pInfo->pFilter = m_filter;
     if (m_filter) m_filter->AddRef();
     pInfo->dir = PINDIR_OUTPUT;
@@ -230,21 +257,24 @@ STDMETHODIMP CVCamPin::QueryPinInfo(PIN_INFO* pInfo) {
     return S_OK;
 }
 
-STDMETHODIMP CVCamPin::QueryDirection(PIN_DIRECTION* pDir) { *pDir = PINDIR_OUTPUT; return S_OK; }
+STDMETHODIMP CVCamPin::QueryDirection(PIN_DIRECTION* pDir) { if (!pDir) return E_POINTER; *pDir = PINDIR_OUTPUT; return S_OK; }
 STDMETHODIMP CVCamPin::QueryId(LPWSTR* Id) {
-    *Id = (LPWSTR)CoTaskMemAlloc(14);
-    wcscpy_s(*Id, 7, L"Output");
+    if (!Id) return E_POINTER;
+    const size_t chars = 7;                       // L"Output" plus terminator
+    *Id = (LPWSTR)CoTaskMemAlloc(chars * sizeof(WCHAR));
+    if (!*Id) return E_OUTOFMEMORY;
+    wcscpy_s(*Id, chars, L"Output");
     return S_OK;
 }
 
 STDMETHODIMP CVCamPin::QueryAccept(const AM_MEDIA_TYPE* pmt) {
-    if (pmt->majortype == MEDIATYPE_Video && pmt->subtype == MEDIASUBTYPE_RGB24) return S_OK;
-    return S_FALSE;
+    return IsOurFormat(pmt) ? S_OK : S_FALSE;
 }
 
 STDMETHODIMP CVCamPin::EnumMediaTypes(IEnumMediaTypes** ppEnum) {
+    if (!ppEnum) return E_POINTER;
     *ppEnum = new CEnumMediaTypes();
-    return S_OK;
+    return *ppEnum ? S_OK : E_OUTOFMEMORY;
 }
 
 STDMETHODIMP CVCamPin::QueryInternalConnections(IPin**, ULONG* nPin) { return E_NOTIMPL; }
@@ -256,23 +286,31 @@ STDMETHODIMP CVCamPin::NewSegment(REFERENCE_TIME, REFERENCE_TIME, double) { retu
 // IAMStreamConfig
 STDMETHODIMP CVCamPin::SetFormat(AM_MEDIA_TYPE* pmt) {
     if (!pmt) return E_POINTER;
-    if (pmt->majortype != MEDIATYPE_Video || pmt->subtype != MEDIASUBTYPE_RGB24) return VFW_E_INVALIDMEDIATYPE;
+    // Callers routinely try to set their preferred resolution here. Accepting
+    // one we do not actually produce is the bug that crashed the client.
+    if (!IsOurFormat(pmt)) return VFW_E_INVALIDMEDIATYPE;
+    EnterCriticalSection(&m_lock);
     FreeMediaType(m_mt);
-    return CopyMediaType(&m_mt, pmt);
+    HRESULT hr = CopyMediaType(&m_mt, pmt);
+    LeaveCriticalSection(&m_lock);
+    return hr;
 }
 
 STDMETHODIMP CVCamPin::GetFormat(AM_MEDIA_TYPE** ppmt) {
+    if (!ppmt) return E_POINTER;
     *ppmt = AllocMediaType(&m_mt);
     return *ppmt ? S_OK : E_OUTOFMEMORY;
 }
 
 STDMETHODIMP CVCamPin::GetNumberOfCapabilities(int* piCount, int* piSize) {
+    if (!piCount || !piSize) return E_POINTER;
     *piCount = 1;
     *piSize = sizeof(VIDEO_STREAM_CONFIG_CAPS);
     return S_OK;
 }
 
 STDMETHODIMP CVCamPin::GetStreamCaps(int iIndex, AM_MEDIA_TYPE** ppmt, BYTE* pSCC) {
+    if (!ppmt || !pSCC) return E_POINTER;
     if (iIndex != 0) return S_FALSE;
 
     AM_MEDIA_TYPE mt;
@@ -389,9 +427,19 @@ void CVCamPin::PushLoop() {
     const DWORD frameMs = 1000 / FRAME_RATE;
     const DWORD frameSize = FRAME_WIDTH * FRAME_HEIGHT * 3;
 
-    // Get the IMemInputPin from the connected pin
+    // Take our own reference under the lock: Disconnect() can run at any point
+    // (the user toggling their camera off), and releasing the pin out from
+    // under this thread is a use-after-free.
+    EnterCriticalSection(&m_lock);
+    IPin* connected = m_connected;
+    if (connected) connected->AddRef();
+    LeaveCriticalSection(&m_lock);
+    if (!connected) return;
+
     IMemInputPin* pInput = NULL;
-    if (!m_connected || FAILED(m_connected->QueryInterface(IID_IMemInputPin, (void**)&pInput))) return;
+    HRESULT hrQI = connected->QueryInterface(IID_IMemInputPin, (void**)&pInput);
+    connected->Release();
+    if (FAILED(hrQI) || !pInput) return;
 
     // Get or create allocator
     IMemAllocator* pAlloc = NULL;
@@ -406,8 +454,13 @@ void CVCamPin::PushLoop() {
     props.cbBuffer = frameSize;
     props.cbAlign = 1;
     props.cbPrefix = 0;
+    ZeroMemory(&actual, sizeof(actual));
     hr = pAlloc->SetProperties(&props, &actual);
     if (FAILED(hr)) { pAlloc->Release(); pInput->Release(); return; }
+    // SetProperties reports what was actually granted, which can be smaller
+    // than what we asked for. Writing a full frame into a short buffer is the
+    // heap overflow that took the client process down with it.
+    if ((DWORD)actual.cbBuffer < frameSize) { pAlloc->Release(); pInput->Release(); return; }
 
     hr = pInput->NotifyAllocator(pAlloc, FALSE);
     if (FAILED(hr)) { pAlloc->Release(); pInput->Release(); return; }
@@ -428,7 +481,10 @@ void CVCamPin::PushLoop() {
         if (FAILED(hr)) continue;
 
         BYTE* pData = NULL;
-        pSample->GetPointer(&pData);
+        if (FAILED(pSample->GetPointer(&pData)) || !pData) { pSample->Release(); continue; }
+        // Re-check per sample: the allocator can hand back a buffer smaller
+        // than negotiated, and this write is unbounded otherwise.
+        if ((DWORD)pSample->GetSize() < frameSize) { pSample->Release(); continue; }
         pSample->SetActualDataLength(frameSize);
 
         if (!ReadFrame(pData, FRAME_WIDTH, FRAME_HEIGHT)) {
