@@ -222,6 +222,15 @@
     .theme-custom-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
     .theme-swatch-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;background:var(--card);border:1px solid var(--card-border);border-radius:var(--radius-sm);font-size:11px;color:var(--text)}
     .theme-swatch-row input[type=color]{width:34px;height:22px;padding:0;border:1px solid var(--glass-border);border-radius:4px;background:none;cursor:pointer}
+    .ask-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:9999;display:flex;align-items:center;justify-content:center}
+    .ask-box{min-width:320px;max-width:440px;padding:18px;background:var(--glass);border:1px solid var(--glass-border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg)}
+    .ask-msg{font-size:12px;color:var(--header);margin-bottom:10px}
+    .ask-input{width:100%;padding:8px 10px;font-size:12px;color:var(--text);background:var(--input-bg);border:1px solid var(--glass-border);border-radius:var(--radius-sm);outline:none}
+    .ask-input:focus{border-color:var(--brand)}
+    .ask-actions{display:flex;gap:6px;justify-content:flex-end;margin-top:12px}
+    .soundpad-cat-pick{max-width:120px;font-size:10px;padding:2px 4px;color:var(--text-muted);background:var(--input-bg);border:1px solid var(--glass-border);border-radius:4px;cursor:pointer}
+    .soundpad-cat-chip .cat-x{margin-left:5px;opacity:.5;font-weight:700}
+    .soundpad-cat-chip .cat-x:hover{opacity:1;color:var(--red)}
     .tab-content{display:none;padding:20px 24px}
     .tab-content.active{display:block}
     /* Multi-column flow, not grid rows: sections pack tightly instead of
@@ -1419,6 +1428,39 @@ function switchSubTab(subId) {
 (function(){const t=localStorage.getItem('active-tab');if(t&&document.getElementById('tab-'+t))switchTab(t);else switchTab('soundpad');})();
 (function(){const s=localStorage.getItem('active-subtab');switchSubTab(s&&document.getElementById('sub-'+s)?s:'soundpad');})();
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+// Electron does not implement window.prompt() - it returns undefined and logs
+// "prompt() is and will not be supported". Every category action went through
+// it, which is why creating and moving categories silently did nothing.
+function askPrompt(message, defaultValue = '') {
+  return new Promise(resolve => {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'ask-backdrop';
+    backdrop.innerHTML = '<div class="ask-box">' +
+      '<div class="ask-msg"></div>' +
+      '<input class="ask-input" type="text">' +
+      '<div class="ask-actions">' +
+        '<button class="mini-btn" data-act="cancel">Cancel</button>' +
+        '<button class="mini-btn" data-act="ok">OK</button>' +
+      '</div></div>';
+    backdrop.querySelector('.ask-msg').textContent = message;
+    const input = backdrop.querySelector('.ask-input');
+    input.value = defaultValue;
+
+    const done = value => { backdrop.remove(); resolve(value); };
+    backdrop.querySelector('[data-act=ok]').onclick = () => done(input.value);
+    backdrop.querySelector('[data-act=cancel]').onclick = () => done(null);
+    backdrop.onclick = e => { if (e.target === backdrop) done(null); };
+    input.onkeydown = e => {
+      if (e.key === 'Enter') done(input.value);
+      if (e.key === 'Escape') done(null);
+      e.stopPropagation();
+    };
+    document.body.appendChild(backdrop);
+    input.focus();
+    input.select();
+  });
+}
+
 function showToast(msg, type = '') {
   const c = document.getElementById('toastContainer');
   const t = document.createElement('div');
@@ -2878,8 +2920,8 @@ function renderProfiles() {
   select.innerHTML = names.length ? names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('') : '<option value="">No profiles</option>';
 }
 
-function saveCurrentProfile() {
-  const name = prompt('Profile name:', document.getElementById('profileSelect')?.value || 'Discord Clean');
+async function saveCurrentProfile() {
+  const name = await askPrompt('Profile name:', document.getElementById('profileSelect')?.value || 'Discord Clean');
   if (!name?.trim()) return;
   const profiles = getProfiles();
   profiles[name.trim()] = captureProfile();
@@ -3455,14 +3497,22 @@ function soundpadRemoveFile(i) {
   soundpadRender();
 }
 
-function soundpadMoveFile(i) {
+async function soundpadMoveFile(i) {
   const files = soundpadGetFiles();
   const f = files[i]; if (!f) return;
-  const next = prompt(`Move "${f.name}" to category:`, f.category || 'Uncategorized');
-  if (!next) return;
-  f.category = next.trim() || 'Uncategorized';
+  const next = await askPrompt('Move "' + f.name + '" to category:', f.category || 'Uncategorized');
+  if (next === null) return;
+  soundpadAssignCategory(i, next);
+}
+
+// Shared by the per-song picker and the move dialog.
+function soundpadAssignCategory(i, category) {
+  const files = soundpadGetFiles();
+  const f = files[i]; if (!f) return;
+  f.category = String(category || '').trim() || 'Uncategorized';
   soundpadSaveFiles(files);
-  if (!soundpadGetCategories().includes(f.category)) soundpadSaveCategories([...soundpadGetCategories(), f.category]);
+  const cats = soundpadGetCategories();
+  if (!cats.includes(f.category)) soundpadSaveCategories([...cats, f.category]);
   soundpadRender();
 }
 
@@ -3474,10 +3524,10 @@ function soundpadSetFileVolume(i, value) {
   if (currentAudio && soundpadState.path === f.path) currentAudio.volume = Math.max(0, Math.min(1, f.volume / 100));
 }
 
-function soundpadSetHotkey(i) {
+async function soundpadSetHotkey(i) {
   const files = soundpadGetFiles();
   const f = files[i]; if (!f) return;
-  const key = prompt(`Hotkey for "${f.name}" (blank clears):`, f.hotkey || '');
+  const key = await askPrompt('Hotkey for "' + f.name + '" (blank clears):', f.hotkey || '');
   if (key === null) return;
   const normalized = key.trim().slice(0, 24);
   files.forEach((item, idx) => { if (idx !== i && item.hotkey?.toLowerCase() === normalized.toLowerCase()) item.hotkey = ''; });
@@ -3486,13 +3536,31 @@ function soundpadSetHotkey(i) {
   soundpadRender();
 }
 
-function soundpadAddCategory() {
-  const name = prompt('New category name:');
+async function soundpadAddCategory() {
+  const name = await askPrompt('New category name:');
   if (!name?.trim()) return;
   const cats = soundpadGetCategories();
   if (!cats.includes(name.trim())) soundpadSaveCategories([...cats, name.trim()]);
   soundpadActiveCategory = name.trim();
+  localStorage.setItem('soundpad-active-category', soundpadActiveCategory);
   soundpadRender();
+}
+
+// Removing a category returns its songs to Uncategorized rather than deleting
+// them - losing songs to a mis-click on a category chip would be unforgivable.
+function soundpadDeleteCategory(name) {
+  if (name === 'Uncategorized' || name === 'All') return;
+  soundpadSaveCategories(soundpadGetCategories().filter(c => c !== name && c !== 'Uncategorized'));
+  const files = soundpadGetFiles();
+  let moved = 0;
+  files.forEach(f => { if ((f.category || 'Uncategorized') === name) { f.category = 'Uncategorized'; moved++; } });
+  soundpadSaveFiles(files);
+  if (soundpadActiveCategory === name) {
+    soundpadActiveCategory = 'All';
+    localStorage.setItem('soundpad-active-category', 'All');
+  }
+  soundpadRender();
+  showToast('Removed "' + name + '"' + (moved ? '; ' + moved + ' song' + (moved !== 1 ? 's' : '') + ' moved to Uncategorized.' : '.'), '');
 }
 
 function soundpadFmt(ms) { const t = Math.max(0, Math.floor((Number(ms)||0)/1000)); return `${Math.floor(t/60)}:${String(t%60).padStart(2,'0')}`; }
@@ -3786,10 +3854,15 @@ function soundpadRenderCategories() {
   const select = document.getElementById('soundpadAddCategory');
   const cats = soundpadGetCategories();
   if (catbar) {
-    catbar.innerHTML = ['All', ...cats].map(c => `<button class="soundpad-cat-chip ${soundpadActiveCategory===c?'active':''}" onclick="soundpadSetCategory(decodeURIComponent('${encodeURIComponent(c)}'))">${esc(c)}</button>`).join('') + `<button class="soundpad-cat-chip add" onclick="soundpadAddCategory()">+ Category</button>`;
+    catbar.innerHTML = ['All', ...cats].map(c => {
+      const enc = encodeURIComponent(c);
+      const removable = c !== 'All' && c !== 'Uncategorized';
+      const x = removable ? `<span class="cat-x" onclick="event.stopPropagation();soundpadDeleteCategory(decodeURIComponent('${enc}'))" title="Remove category">&times;</span>` : '';
+      return `<button class="soundpad-cat-chip ${soundpadActiveCategory===c?'active':''}" onclick="soundpadSetCategory(decodeURIComponent('${enc}'))">${esc(c)}${x}</button>`;
+    }).join('') + `<button class="soundpad-cat-chip add" onclick="soundpadAddCategory()">+ Category</button>`;
   }
   if (select) {
-    if (!cats.includes(soundpadNewSongCategory)) soundpadNewSongCategory = cats[0] || 'Uncategorized';
+    if (!cats.includes(soundpadNewSongCategory)) soundpadSetNewCategory(cats[0] || 'Uncategorized');
     select.innerHTML = cats.map(c => `<option value="${esc(c)}" ${c===soundpadNewSongCategory?'selected':''}>Add to ${esc(c)}</option>`).join('');
     select.onchange = () => soundpadSetNewCategory(select.value);
   }
@@ -3822,11 +3895,26 @@ function soundpadRender() {
     tile.className = 'soundpad-tile' + (soundpadState.path === f.path && soundpadState.state !== 'stopped' ? ' active' : '');
     const playing = soundpadState.path === f.path && soundpadState.state === 'playing';
     const inQueue = soundpadQueue.some(q => q.path === f.path);
-    tile.innerHTML = `<span class="soundpad-name">${esc(f.name)}</span><span class="soundpad-tag">${esc(f.category||'Uncategorized')}</span><input class="soundpad-volume" type="range" min="0" max="200" value="${Number(f.volume ?? 100)}" title="Song volume"><span class="soundpad-controls"><button class="soundpad-ctrl">${playing?'&#10074;&#10074;':'&#9654;'}</button><button class="soundpad-ctrl" title="Add to queue" style="${inQueue?'color:var(--brand)':''}">Q+</button><button class="soundpad-ctrl">-10</button><button class="soundpad-ctrl">+10</button><button class="soundpad-ctrl soundpad-hotkey" title="Set hotkey">${esc(f.hotkey || 'Key')}</button><button class="soundpad-ctrl danger">&#9632;</button><button class="soundpad-ctrl danger" title="Remove song">&times;</button></span>`;
+    const cats = soundpadGetCategories();
+    const cur = f.category || 'Uncategorized';
+    const catOpts = [...new Set([cur, ...cats])].map(c => `<option value="${esc(c)}" ${c===cur?'selected':''}>${esc(c)}</option>`).join('');
+    tile.innerHTML = `<span class="soundpad-name">${esc(f.name)}</span><select class="soundpad-cat-pick" title="Category">${catOpts}<option value="__new">+ New category...</option></select><input class="soundpad-volume" type="range" min="0" max="200" value="${Number(f.volume ?? 100)}" title="Song volume"><span class="soundpad-controls"><button class="soundpad-ctrl">${playing?'&#10074;&#10074;':'&#9654;'}</button><button class="soundpad-ctrl" title="Add to queue" style="${inQueue?'color:var(--brand)':''}">Q+</button><button class="soundpad-ctrl">-10</button><button class="soundpad-ctrl">+10</button><button class="soundpad-ctrl soundpad-hotkey" title="Set hotkey">${esc(f.hotkey || 'Key')}</button><button class="soundpad-ctrl danger">&#9632;</button><button class="soundpad-ctrl danger" title="Remove song">&times;</button></span>`;
     tile.onclick = () => soundpadPlayFile(f);
     const vol = tile.querySelector('.soundpad-volume');
     vol.oninput = e => { e.stopPropagation(); soundpadSetFileVolume(i, e.target.value); };
     vol.onclick = e => e.stopPropagation();
+    const catPick = tile.querySelector('.soundpad-cat-pick');
+    catPick.onclick = e => e.stopPropagation();
+    catPick.onchange = async e => {
+      e.stopPropagation();
+      if (e.target.value === '__new') {
+        const name = await askPrompt('New category for "' + f.name + '":', '');
+        if (!name?.trim()) { soundpadRender(); return; }
+        soundpadAssignCategory(i, name);
+        return;
+      }
+      soundpadAssignCategory(i, e.target.value);
+    };
     const btns = tile.querySelectorAll('.soundpad-ctrl');
     btns[0].onclick = e => { e.stopPropagation(); soundpadPlayFile(f); };
     btns[1].onclick = e => { e.stopPropagation(); addToQueue(f); };
@@ -3839,7 +3927,8 @@ function soundpadRender() {
       if (soundpadState.path === f.path) soundpadStop();
       soundpadRemoveFile(i);
     };
-    tile.oncontextmenu = e => { e.preventDefault(); const c = prompt('m = move category, r = remove:', 'm'); if (c?.startsWith('r')) soundpadRemoveFile(i); else soundpadMoveFile(i); };
+    // Category now has its own picker, so right-click just moves.
+    tile.oncontextmenu = e => { e.preventDefault(); soundpadMoveFile(i); };
     grid.appendChild(tile);
   });
 }
