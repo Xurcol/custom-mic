@@ -1,0 +1,65 @@
+{
+  "name": "custom-mic",
+  "version": "1.4.2",
+  "description": "Custom Mic - EQ, Soundpad and Spatial Audio for your microphone",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win"
+  },
+  "author": "xurco",
+  "license": "ISC",
+  "build": {
+    "appId": "com.xurco.custommic",
+    "productName": "Custom Mic",
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "icon.ico",
+      "requestedExecutionLevel": "requireAdministrator"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Custom Mic"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html",
+      "bg.mp4",
+      "icon.ico",
+      "icon.png",
+      "native/build/Release/vst2_host.node",
+      "native/build/Release/vcam_sender.node",
+      "native/build/Release/virtual_cam.dll",
+      "node_modules/**/*"
+    ],
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/youtube-dl-exec/bin/*",
+      "native/build/Release/vst2_host.node",
+      "native/build/Release/vcam_sender.node",
+      "native/build/Release/virtual_cam.dll"
+    ]
+  },
+  "dependencies": {
+    "node-addon-api": "^8.9.0",
+    "node-gyp": "^13.0.1",
+    "socket.io-client": "^4.8.1",
+    "ws": "^8.21.0",
+    "youtube-dl-exec": "^3.1.8"
+  },
+  "devDependencies": {
+    "electron": "^42.4.1",
+    "electron-builder": "^26.15.3"
+  }
+}

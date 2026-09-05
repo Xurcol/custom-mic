@@ -1,0 +1,105 @@
+;
+; vaudio.inf — Custom Mic Virtual Audio Cable
+;
+; Installs a virtual audio loopback driver that creates two endpoints:
+;   "Custom Mic Output" (render)  — play audio here
+;   "Custom Mic Input"  (capture) — record looped-back audio from here
+;
+; Requires Windows 10/11. Must be test-signed or WHQL-signed.
+;
+
+[Version]
+Signature   = "$Windows NT$"
+Class       = MEDIA
+ClassGuid   = {4d36e96c-e325-11ce-bfc1-08002be10318}
+Provider    = %MfgName%
+CatalogFile = vaudio.cat
+DriverVer   = 07/05/2026,1.0.0.0
+PnpLockdown = 1
+
+[SourceDisksNames]
+1 = %DiskName%,,,""
+
+[SourceDisksFiles]
+vaudio.sys = 1
+
+[DestinationDirs]
+DefaultDestDir       = 13
+VaudioCopy.CopyFiles = 13
+
+[Manufacturer]
+%MfgName% = VaudioModels, NTamd64
+
+[VaudioModels.NTamd64]
+%DeviceName% = VaudioInstall, ROOT\VaudioCable
+
+; ─── Install section ─────────────────────────────────────────────────
+
+[VaudioInstall]
+Include    = ks.inf, wdmaudio.inf
+Needs      = KS.Registration, WDMAUDIO.Registration
+CopyFiles  = VaudioCopy.CopyFiles
+AddReg     = VaudioInstall.AddReg
+
+[VaudioInstall.AddReg]
+; Friendly names for the audio endpoints
+HKR,, FriendlyName,, %DeviceName%
+
+[VaudioCopy.CopyFiles]
+vaudio.sys
+
+; ─── Interfaces (render + capture endpoints) ─────────────────────────
+
+[VaudioInstall.Interfaces]
+; Render endpoint — appears as a playback device
+AddInterface = %KSCATEGORY_AUDIO%,    %KSNAME_Render%, VaudioRender
+AddInterface = %KSCATEGORY_RENDER%,   %KSNAME_Render%, VaudioRender
+
+; Capture endpoint — appears as a recording device
+AddInterface = %KSCATEGORY_AUDIO%,    %KSNAME_Capture%, VaudioCapture
+AddInterface = %KSCATEGORY_CAPTURE%,  %KSNAME_Capture%, VaudioCapture
+
+[VaudioRender]
+AddReg = VaudioRender.AddReg
+
+[VaudioRender.AddReg]
+HKR,, FriendlyName,, %RenderName%
+HKR,, CLSID,,        %CLSID_Proxy%
+
+[VaudioCapture]
+AddReg = VaudioCapture.AddReg
+
+[VaudioCapture.AddReg]
+HKR,, FriendlyName,, %CaptureName%
+HKR,, CLSID,,        %CLSID_Proxy%
+
+; ─── Service ─────────────────────────────────────────────────────────
+
+[VaudioInstall.Services]
+AddService = vaudio, 0x00000002, VaudioService
+
+[VaudioService]
+DisplayName   = %ServiceName%
+ServiceType   = 1                ; SERVICE_KERNEL_DRIVER
+StartType     = 3                ; SERVICE_DEMAND_START
+ErrorControl  = 1                ; SERVICE_ERROR_NORMAL
+ServiceBinary = %13%\vaudio.sys
+
+; ─── Strings ─────────────────────────────────────────────────────────
+
+[Strings]
+MfgName      = "Custom Mic"
+DeviceName   = "Custom Mic Virtual Audio Cable"
+RenderName   = "Custom Mic Output"
+CaptureName  = "Custom Mic Input"
+ServiceName  = "Custom Mic Virtual Audio Cable"
+DiskName     = "Custom Mic Virtual Audio Cable Installation Disk"
+
+KSNAME_Render  = "CustomMicOutput"
+KSNAME_Capture = "CustomMicInput"
+
+; Standard GUIDs
+KSCATEGORY_AUDIO   = "{6994AD04-93EF-11D0-A3CC-00A0C9223196}"
+KSCATEGORY_RENDER  = "{65E8773E-8F56-11D0-A3B9-00A0C9223196}"
+KSCATEGORY_CAPTURE = "{65E8773D-8F56-11D0-A3B9-00A0C9223196}"
+CLSID_Proxy        = "{17CCA71B-ECD7-11D0-B908-00A0C9223196}"
