@@ -243,9 +243,34 @@ function runYtDlpDownload(target, flags, onProgress) {
     child.on('error', reject);
     child.on('close', code => {
       if (code === 0) return resolve();
-      reject(new Error(stderr.replace(/\s+/g, ' ').trim() || `Download failed (yt-dlp exit ${code}).`));
+      const clean = stderr.replace(/\s+/g, ' ').trim();
+      const reason = (clean.match(/ERROR:\s*([^]*?)(?:\s+File "|$)/) || [])[1] || clean;
+      const err = new Error(reason || `Download failed (yt-dlp exit ${code}).`);
+      err.stderr = clean;
+      reject(err);
     });
   });
+}
+
+let ytDlpUpdatedThisRun = false;
+
+function looksLikeStaleExtractor(message) {
+    return /403|forbidden|unable to (download|extract)|nsig|signature|player response|precondition check failed|sign in to confirm/i
+        .test(String(message || ""));
+}
+
+/** Run yt-dlp's own updater. Resolves to true when it reports success. */
+function updateYtDlp() {
+    const bin = getYtDlpPath();
+    if (!bin || !fs.existsSync(bin)) return Promise.resolve(false);
+    return new Promise(resolve => {
+        execFile(bin, ["-U"], { windowsHide: true, maxBuffer: 4 * 1024 * 1024 }, (error, stdout) => {
+            const out = String(stdout || "");
+            const ok = !error && /Updated yt-dlp|is up to date/i.test(out);
+            console.log("[yt-dlp] update:", out.replace(/\s+/g, " ").trim().slice(0, 200));
+            resolve(ok);
+        });
+    });
 }
 
 // Downloads into a staging folder, then moves the finished file into place so a
@@ -279,7 +304,23 @@ async function downloadAudioToCache(source, onProgress) {
   }
 
   try {
-    await runYtDlpDownload(info.webpageUrl || source, flags, onProgress);
+    try {
+      await runYtDlpDownload(info.webpageUrl || source, flags, onProgress);
+    } catch (e) {
+      // One retry, and only for the failure shape that an out-of-date
+      // extractor produces - a genuinely private or removed video should fail
+      // straight away rather than sit through an update first.
+      if (ytDlpUpdatedThisRun || !looksLikeStaleExtractor(e.message)) throw e;
+      ytDlpUpdatedThisRun = true;
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('audio-download-progress', { source, percent: 0, note: 'Updating link support...' });
+      }
+      const updated = await updateYtDlp();
+      if (!updated) throw e;
+      fs.rmSync(stageDir, { recursive: true, force: true });
+      fs.mkdirSync(stageDir, { recursive: true });
+      await runYtDlpDownload(info.webpageUrl || source, flags, onProgress);
+    }
 
     const produced = fs.readdirSync(stageDir).filter(f => !f.endsWith('.part'));
     if (!produced.length) throw new Error('Download produced no audio file.');
