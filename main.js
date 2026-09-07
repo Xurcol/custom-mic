@@ -577,6 +577,10 @@ ipcMain.handle('aivoice:disconnect', async () => {
   return { ok: true };
 });
 
+function startedAtLogin() {
+  return process.argv.includes("--startup");
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -590,7 +594,18 @@ function createWindow() {
       nodeIntegration: false,
     },
     backgroundColor: '#1a1b1e',
+    // Launched by Windows at sign-in, the window starts minimised: opening on
+    // login should not take over the screen. The tray/taskbar entry is enough.
+    show: !startedAtLogin(),
   });
+  if (startedAtLogin()) {
+    // show:false alone would leave no taskbar entry at all, so it is shown
+    // without focus and then minimised - present, but out of the way.
+    mainWindow.once('ready-to-show', () => {
+      mainWindow.showInactive();
+      mainWindow.minimize();
+    });
+  }
   mainWindow.loadFile('index.html');
   mainWindow.on('closed', () => { mainWindow = null; });
 }
@@ -765,6 +780,26 @@ function sendDownloadProgress(source, percent) {
 }
 
 // Adding a link downloads it up front, so the library entry points at a local file.
+// Windows owns the run-at-login state, so it is read back rather than
+// mirrored in our own settings where the two could disagree.
+ipcMain.handle('get-open-at-login', () => {
+  try { return app.getLoginItemSettings().openAtLogin; } catch { return false; }
+});
+
+ipcMain.handle('set-open-at-login', (_e, enabled) => {
+  try {
+    app.setLoginItemSettings({
+      openAtLogin: !!enabled,
+      path: process.execPath,
+      // Started minimised: opening on sign-in should not take over the screen.
+      args: ['--startup'],
+    });
+    return { openAtLogin: app.getLoginItemSettings().openAtLogin };
+  } catch (e) {
+    return { error: e.message };
+  }
+});
+
 ipcMain.handle('resolve-link', async (_e, url) => {
   try {
     const entry = await ensureLocalAudio(url, p => sendDownloadProgress(url, p));

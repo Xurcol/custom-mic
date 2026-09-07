@@ -190,6 +190,24 @@
     .soundpad-ctrl:hover{background:var(--card-hover);transform:scale(1.1);border-color:rgba(255,255,255,.15)}
     .soundpad-ctrl.danger{color:var(--red);border-color:rgba(248,113,113,.15)}
     .soundpad-ctrl.danger:hover{background:rgba(248,113,113,.1);border-color:rgba(248,113,113,.3)}
+    /* Right-click menu for a song. Transform and opacity only, so the open
+       animation runs on the compositor and never janks against playback. */
+    .ctx-menu{position:fixed;z-index:4000;min-width:172px;padding:5px;background:var(--glass);backdrop-filter:blur(var(--glass-blur));border:1px solid var(--glass-border);border-radius:var(--radius-md);box-shadow:var(--shadow-lg);opacity:0;transform:scale(.92) translateY(-6px);transform-origin:top left;transition:opacity .13s cubic-bezier(.4,0,.2,1),transform .13s cubic-bezier(.34,1.4,.64,1)}
+    .ctx-menu.open{opacity:1;transform:scale(1) translateY(0)}
+    .ctx-menu.closing{opacity:0;transform:scale(.96) translateY(-4px);transition-duration:.09s}
+    .ctx-item{display:flex;align-items:center;gap:9px;width:100%;padding:7px 10px;border:none;border-radius:var(--radius-sm);background:none;color:var(--text);font-size:12px;font-weight:600;text-align:left;cursor:pointer;transition:background .12s,color .12s}
+    .ctx-item:hover{background:var(--bg-hover);color:var(--header)}
+    .ctx-item.danger{color:var(--red)}
+    .ctx-item.danger:hover{background:rgba(248,113,113,.12)}
+    .ctx-icon{width:15px;text-align:center;opacity:.75;font-size:11px}
+    .ctx-hint{margin-left:auto;font-size:10px;color:var(--text-muted);font-weight:600}
+    .ctx-sep{height:1px;margin:4px 6px;background:var(--glass-border)}
+    .ctx-title{padding:6px 10px 7px;font-size:11px;font-weight:700;color:var(--header);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:230px}
+    /* Startup: the window is painted before the app has laid out, so it is
+       held back for one frame and eased in rather than snapping into place. */
+    @keyframes app-boot{from{opacity:0;transform:scale(.985) translateY(8px)}to{opacity:1;transform:none}}
+    .app-booting{opacity:0}
+    .app-booted{animation:app-boot .42s cubic-bezier(.22,1,.36,1) both}
     .soundpad-nowbar{display:none;margin:0 0 12px;padding:14px 16px;background:linear-gradient(135deg,rgba(196,113,245,.06),rgba(124,92,252,.04));border:1px solid rgba(196,113,245,.15);border-radius:var(--radius-md);backdrop-filter:blur(12px);box-shadow:0 0 30px rgba(196,113,245,.05)}
     .soundpad-nowbar.show{display:block;animation:fadeSlideIn .4s cubic-bezier(.16,1,.3,1)}
     .soundpad-nowrow{display:flex;align-items:center;gap:10px}
@@ -402,6 +420,11 @@
 </head>
 <body>
 <video id="bgVideo" src="bg.mp4" autoplay muted loop playsinline></video>
+<script>
+  // Applied before anything renders, so the window never flashes a
+  // half-built layout on the way in.
+  document.documentElement.classList.add('app-booting');
+</script>
 <div class="toast-container" id="toastContainer"></div>
 <div class="titlebar">
   <span class="titlebar-title">Custom Mic</span>
@@ -804,6 +827,15 @@
         <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
           <button class="mini-btn" onclick="themeReset()">Reset to Default</button>
         </div>
+      </div>
+
+      <div class="mic-section" style="margin-top:12px">
+        <h3>Startup</h3>
+        <div class="monitor-row">
+          <label for="openOnLaunchToggle">Open on launch</label>
+          <button class="eq-fx-toggle" id="openOnLaunchToggle" onclick="toggleOpenOnLaunch()" title="Start Custom Mic when you sign in to Windows"></button>
+        </div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:4px">Starts Custom Mic automatically when you sign in to Windows.</div>
       </div>
 
       <div class="mic-section" style="margin-top:12px">
@@ -1369,6 +1401,33 @@ function themeApplyBgVideo() {
   themeSave();
 }
 
+// Owned by Windows rather than by our settings file, so the toggle reads the
+// real state instead of a copy that can drift out of step with it.
+async function syncOpenOnLaunch() {
+  const btn = document.getElementById('openOnLaunchToggle');
+  if (!btn || !window.api?.getOpenAtLogin) return;
+  try {
+    const on = await window.api.getOpenAtLogin();
+    btn.classList.toggle('on', !!on);
+  } catch {}
+}
+
+async function toggleOpenOnLaunch() {
+  const btn = document.getElementById('openOnLaunchToggle');
+  if (!btn || !window.api?.setOpenAtLogin) return;
+  const next = !btn.classList.contains('on');
+  try {
+    const result = await window.api.setOpenAtLogin(next);
+    if (result?.error) { showToast('Could not change startup: ' + result.error, 'error'); return; }
+    btn.classList.toggle('on', !!result?.openAtLogin);
+    showToast(result?.openAtLogin ? 'Custom Mic will open on launch.' : 'Custom Mic will not open on launch.', '');
+  } catch (e) {
+    showToast('Could not change startup: ' + e.message, 'error');
+  }
+}
+
+syncOpenOnLaunch();
+
 async function themePickBackgroundVideo() {
   try {
     const files = await window.api.selectVideoFiles();
@@ -1415,6 +1474,18 @@ const micExtrasVisible = false;
 (function applyMicExtras() {
   const el = document.getElementById('micExtras');
   if (el) el.hidden = !micExtrasVisible;
+})();
+
+// Wait for layout and the first paint, then run the entrance once.
+(function bootAnimation() {
+  const run = () => requestAnimationFrame(() => requestAnimationFrame(() => {
+    const root = document.documentElement;
+    root.classList.remove('app-booting');
+    document.body.classList.add('app-booted');
+    setTimeout(() => document.body.classList.remove('app-booted'), 700);
+  }));
+  if (document.readyState === 'complete') run();
+  else window.addEventListener('load', run, { once: true });
 })();
 
 function switchSubTab(subId) {
@@ -3849,6 +3920,99 @@ function rebuildSoundpad() {
 
 function rebuildAll() { rebuildMic(); rebuildSoundpad(); }
 
+// ── Song context menu ──
+// Everything that used to be a row of icons on the tile lives here instead:
+// the tile is a play button and a name, and the rest is one right-click away.
+let ctxMenuEl = null;
+
+function closeSoundpadMenu() {
+  if (!ctxMenuEl) return;
+  const el = ctxMenuEl;
+  ctxMenuEl = null;
+  el.classList.add('closing');
+  el.classList.remove('open');
+  // Let the exit transition finish before the node goes away.
+  setTimeout(() => { try { el.remove(); } catch {} }, 110);
+  document.removeEventListener('mousedown', onCtxOutside, true);
+  document.removeEventListener('keydown', onCtxKey, true);
+  window.removeEventListener('blur', closeSoundpadMenu);
+  window.removeEventListener('resize', closeSoundpadMenu);
+}
+
+function onCtxOutside(e) { if (ctxMenuEl && !ctxMenuEl.contains(e.target)) closeSoundpadMenu(); }
+function onCtxKey(e) { if (e.key === 'Escape') { e.stopPropagation(); closeSoundpadMenu(); } }
+
+function openSoundpadMenu(event, index, file) {
+  event.preventDefault();
+  event.stopPropagation();
+  closeSoundpadMenu();
+
+  const playing = soundpadState.path === file.path && soundpadState.state === 'playing';
+  const active = soundpadState.path === file.path && soundpadState.state !== 'stopped';
+  const inQueue = soundpadQueue.some(q => q.path === file.path);
+
+  const items = [
+    { icon: playing ? '&#10074;&#10074;' : '&#9654;', label: playing ? 'Pause' : 'Play', run: () => soundpadPlayFile(file) },
+    { icon: 'Q', label: inQueue ? 'Queued' : 'Queue', run: () => addToQueue(file) },
+    { sep: true },
+    { icon: '&#8630;', label: 'Back 10s', run: () => soundpadSeek(-10000), disabled: !active },
+    { icon: '&#8631;', label: 'Skip 10s', run: () => soundpadSeek(10000), disabled: !active },
+    { icon: '&#9632;', label: 'Stop', run: () => soundpadStop(), disabled: !active },
+    { sep: true },
+    { icon: '&#9000;', label: 'Bind key', hint: file.hotkey || '', run: () => soundpadSetHotkey(index) },
+    { icon: '&#8942;', label: 'Move category', run: () => soundpadMoveFile(index) },
+    { sep: true },
+    { icon: '&times;', label: 'Remove', danger: true, run: () => {
+        if (soundpadState.path === file.path) soundpadStop();
+        soundpadRemoveFile(index);
+      } },
+  ];
+
+  const menu = document.createElement('div');
+  menu.className = 'ctx-menu';
+  menu.innerHTML =
+    '<div class="ctx-title">' + esc(file.name) + '</div>' +
+    items.map((item, n) => item.sep
+      ? '<div class="ctx-sep"></div>'
+      : '<button class="ctx-item' + (item.danger ? ' danger' : '') + '" data-n="' + n + '"' +
+        (item.disabled ? ' disabled style="opacity:.4;cursor:default"' : '') + '>' +
+          '<span class="ctx-icon">' + item.icon + '</span>' + esc(item.label) +
+          (item.hint ? '<span class="ctx-hint">' + esc(item.hint) + '</span>' : '') +
+        '</button>').join('');
+
+  document.body.appendChild(menu);
+  ctxMenuEl = menu;
+
+  // Position after it is in the DOM so the real size is known, and keep it
+  // inside the window rather than letting it run off an edge.
+  const pad = 8;
+  const rect = menu.getBoundingClientRect();
+  let x = event.clientX;
+  let y = event.clientY;
+  if (x + rect.width + pad > window.innerWidth) x = Math.max(pad, window.innerWidth - rect.width - pad);
+  if (y + rect.height + pad > window.innerHeight) y = Math.max(pad, window.innerHeight - rect.height - pad);
+  menu.style.left = x + 'px';
+  menu.style.top = y + 'px';
+
+  menu.querySelectorAll('.ctx-item').forEach(btn => {
+    btn.onclick = e => {
+      e.stopPropagation();
+      const item = items[Number(btn.dataset.n)];
+      if (!item || item.disabled) return;
+      closeSoundpadMenu();
+      try { item.run(); } catch (err) { showToast('Failed: ' + err.message, 'error'); }
+    };
+  });
+
+  // One frame in the closed state, so the transition actually plays.
+  requestAnimationFrame(() => menu.classList.add('open'));
+
+  document.addEventListener('mousedown', onCtxOutside, true);
+  document.addEventListener('keydown', onCtxKey, true);
+  window.addEventListener('blur', closeSoundpadMenu);
+  window.addEventListener('resize', closeSoundpadMenu);
+}
+
 function soundpadRenderCategories() {
   const catbar = document.getElementById('soundpadCatbar');
   const select = document.getElementById('soundpadAddCategory');
@@ -3898,7 +4062,7 @@ function soundpadRender() {
     const cats = soundpadGetCategories();
     const cur = f.category || 'Uncategorized';
     const catOpts = [...new Set([cur, ...cats])].map(c => `<option value="${esc(c)}" ${c===cur?'selected':''}>${esc(c)}</option>`).join('');
-    tile.innerHTML = `<span class="soundpad-name">${esc(f.name)}</span><select class="soundpad-cat-pick" title="Category">${catOpts}<option value="__new">+ New category...</option></select><input class="soundpad-volume" type="range" min="0" max="200" value="${Number(f.volume ?? 100)}" title="Song volume"><span class="soundpad-controls"><button class="soundpad-ctrl">${playing?'&#10074;&#10074;':'&#9654;'}</button><button class="soundpad-ctrl" title="Add to queue" style="${inQueue?'color:var(--brand)':''}">Q+</button><button class="soundpad-ctrl">-10</button><button class="soundpad-ctrl">+10</button><button class="soundpad-ctrl soundpad-hotkey" title="Set hotkey">${esc(f.hotkey || 'Key')}</button><button class="soundpad-ctrl danger">&#9632;</button><button class="soundpad-ctrl danger" title="Remove song">&times;</button></span>`;
+    tile.innerHTML = `<span class="soundpad-name">${esc(f.name)}</span><select class="soundpad-cat-pick" title="Category">${catOpts}<option value="__new">+ New category...</option></select><input class="soundpad-volume" type="range" min="0" max="200" value="${Number(f.volume ?? 100)}" title="Song volume"><span class="soundpad-controls"><button class="soundpad-ctrl" title="Play / pause - right-click the song for more">${playing?'&#10074;&#10074;':'&#9654;'}</button></span>`;
     tile.onclick = () => soundpadPlayFile(f);
     const vol = tile.querySelector('.soundpad-volume');
     vol.oninput = e => { e.stopPropagation(); soundpadSetFileVolume(i, e.target.value); };
@@ -3917,18 +4081,7 @@ function soundpadRender() {
     };
     const btns = tile.querySelectorAll('.soundpad-ctrl');
     btns[0].onclick = e => { e.stopPropagation(); soundpadPlayFile(f); };
-    btns[1].onclick = e => { e.stopPropagation(); addToQueue(f); };
-    btns[2].onclick = e => { e.stopPropagation(); soundpadSeek(-10000); };
-    btns[3].onclick = e => { e.stopPropagation(); soundpadSeek(10000); };
-    btns[4].onclick = e => { e.stopPropagation(); soundpadSetHotkey(i); };
-    btns[5].onclick = e => { e.stopPropagation(); soundpadStop(); };
-    btns[6].onclick = e => {
-      e.stopPropagation();
-      if (soundpadState.path === f.path) soundpadStop();
-      soundpadRemoveFile(i);
-    };
-    // Category now has its own picker, so right-click just moves.
-    tile.oncontextmenu = e => { e.preventDefault(); soundpadMoveFile(i); };
+    tile.oncontextmenu = e => openSoundpadMenu(e, i, f);
     grid.appendChild(tile);
   });
 }

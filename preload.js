@@ -41,6 +41,8 @@ contextBridge.exposeInMainWorld('api', {
   recorderOpenFile: (path) => ipcRenderer.invoke('recorder:open-file', path),
   recorderOpenFolder: (path) => ipcRenderer.invoke('recorder:open-folder', path),
   setContentProtection: (enabled) => ipcRenderer.invoke('set-content-protection', !!enabled),
+  getOpenAtLogin: () => ipcRenderer.invoke('get-open-at-login'),
+  setOpenAtLogin: (enabled) => ipcRenderer.invoke('set-open-at-login', !!enabled),
   aiVoice: {
     selectFolder: () => ipcRenderer.invoke('aivoice:select-folder'),
     status: () => ipcRenderer.invoke('aivoice:status'),
