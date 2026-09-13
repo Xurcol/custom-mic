@@ -43,6 +43,23 @@ contextBridge.exposeInMainWorld('api', {
   setContentProtection: (enabled) => ipcRenderer.invoke('set-content-protection', !!enabled),
   getOpenAtLogin: () => ipcRenderer.invoke('get-open-at-login'),
   setOpenAtLogin: (enabled) => ipcRenderer.invoke('set-open-at-login', !!enabled),
+  spotifyStart: () => ipcRenderer.invoke('spotify:start'),
+  spotifyStop: () => ipcRenderer.invoke('spotify:stop'),
+  spotifyGet: () => ipcRenderer.invoke('spotify:get'),
+  spotifyCommand: (cmd, arg) => ipcRenderer.invoke('spotify:command', cmd, arg),
+  songCover: (song) => ipcRenderer.invoke('song-cover', song),
+  spotifyAudioStart: (sampleRate) => ipcRenderer.invoke('spotify-audio:start', sampleRate),
+  spotifyAudioStop: () => ipcRenderer.invoke('spotify-audio:stop'),
+  onSpotifyAudioStatus: (cb) => {
+    const handler = (_e, status) => cb(status);
+    ipcRenderer.on('spotify-audio:status', handler);
+    return () => ipcRenderer.removeListener('spotify-audio:status', handler);
+  },
+  onSpotifyState: (cb) => {
+    const handler = (_e, state) => cb(state);
+    ipcRenderer.on('spotify:state', handler);
+    return () => ipcRenderer.removeListener('spotify:state', handler);
+  },
   aiVoice: {
     selectFolder: () => ipcRenderer.invoke('aivoice:select-folder'),
     status: () => ipcRenderer.invoke('aivoice:status'),
@@ -61,6 +78,12 @@ contextBridge.exposeInMainWorld('api', {
       return () => ipcRenderer.removeListener('aivoice:audio-response', handler);
     },
   },
+});
+
+// MessagePorts cannot cross the context bridge. window.postMessage is the
+// documented way to hand one to an isolated page.
+ipcRenderer.on('spotify-audio-port', (event) => {
+  window.postMessage('custom-mic:spotify-audio-port', '*', event.ports);
 });
 
 contextBridge.exposeInMainWorld('windowControls', {

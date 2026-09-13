@@ -41,14 +41,18 @@
       "native/build/Release/vst2_host.node",
       "native/build/Release/vcam_sender.node",
       "native/build/Release/virtual_cam.dll",
-      "node_modules/**/*"
+      "node_modules/**/*",
+      "spotify-bridge.ps1",
+      "native/build/Release/spotify_capture.node"
     ],
     "asar": true,
     "asarUnpack": [
       "node_modules/youtube-dl-exec/bin/*",
       "native/build/Release/vst2_host.node",
       "native/build/Release/vcam_sender.node",
-      "native/build/Release/virtual_cam.dll"
+      "native/build/Release/virtual_cam.dll",
+      "spotify-bridge.ps1",
+      "native/build/Release/spotify_capture.node"
     ]
   },
   "dependencies": {

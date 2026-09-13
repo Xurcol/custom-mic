@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, desktopCapturer, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, desktopCapturer, shell, MessageChannelMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
@@ -169,6 +169,7 @@ async function resolveOnlineAudioSource(source) {
     title: info.title || fallbackTitle || webpageUrl || original,
     durationMs: Number.isFinite(Number(info.duration)) ? Math.round(Number(info.duration) * 1000) : 0,
     webpageUrl,
+    thumbnail: pickThumbnail(info),
     cachedAt: Date.now(),
   };
   onlineAudioCache.set(original, resolved);
@@ -202,7 +203,7 @@ function readAudioCacheEntry(url) {
     const stat = fs.statSync(abs);
     if (!stat.isFile() || stat.size < MIN_VALID_AUDIO_BYTES) return null;
     if (Number.isFinite(meta.size) && meta.size > 0 && stat.size !== meta.size) return null;
-    return { source: url, path: abs, name: meta.name || '', durationMs: meta.durationMs || 0, size: stat.size };
+    return { source: url, path: abs, name: meta.name || '', durationMs: meta.durationMs || 0, size: stat.size, cover: existingCover(key) };
   } catch {
     return null;
   }
@@ -342,7 +343,9 @@ async function downloadAudioToCache(source, onProgress) {
       savedAt: Date.now(),
     }, null, 2));
 
-    return { source, path: finalPath, name: info.title, durationMs: info.durationMs, size };
+    // Artwork is a nicety: a failed image download must never fail the song.
+    const cover = await downloadCover(info.thumbnail, key).catch(() => '');
+    return { source, path: finalPath, name: info.title, durationMs: info.durationMs, size, cover };
   } finally {
     fs.rmSync(stageDir, { recursive: true, force: true });
   }
@@ -613,6 +616,8 @@ function createWindow() {
 app.whenReady().then(createWindow);
 app.on('window-all-closed', () => app.quit());
 app.on('before-quit', () => {
+  stopSpotifyBridge();
+  stopSpotifyAudio();
   try { aiVoiceSocket?.disconnect(); } catch {}
   aiVoiceSocket = null;
   try { aiVoiceProcess?.kill(); } catch {}
@@ -782,6 +787,337 @@ function sendDownloadProgress(source, percent) {
 // Adding a link downloads it up front, so the library entry points at a local file.
 // Windows owns the run-at-login state, so it is read back rather than
 // mirrored in our own settings where the two could disagree.
+// ── Spotify bridge ──
+// Follows the Spotify desktop app through Windows' media session API. A small
+// PowerShell process does the WinRT work - no native build, no Spotify login -
+// and speaks JSON lines: state on stdout, commands on stdin.
+let spotifyProc = null;
+let spotifyWanted = false;
+let spotifyRestartTimer = null;
+let spotifyRestarts = 0;
+let spotifyLastState = { available: false };
+let spotifyLastCover = '';
+
+function spotifyBridgePath() {
+  let p = path.join(__dirname, 'spotify-bridge.ps1');
+  // PowerShell cannot read a script from inside the asar archive.
+  if (p.includes('app.asar') && !p.includes('app.asar.unpacked')) p = p.replace('app.asar', 'app.asar.unpacked');
+  return p;
+}
+
+function sendSpotifyState(state) {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('spotify:state', state);
+}
+
+function startSpotifyBridge() {
+  spotifyWanted = true;
+  if (spotifyProc) return { ok: true };
+  const script = spotifyBridgePath();
+  if (!fs.existsSync(script)) return { error: 'Spotify bridge script is missing.' };
+
+  const child = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script], {
+    windowsHide: true,
+    stdio: ['pipe', 'pipe', 'pipe'],
+  });
+  spotifyProc = child;
+
+  let buffer = '';
+  child.stdout.setEncoding('utf8');
+  child.stdout.on('data', chunk => {
+    buffer += chunk;
+    let nl;
+    while ((nl = buffer.indexOf('\n')) >= 0) {
+      const line = buffer.slice(0, nl).replace(/^﻿/, '').trim();
+      buffer = buffer.slice(nl + 1);
+      if (!line) continue;
+      let msg;
+      try { msg = JSON.parse(line); } catch { continue; }
+      if (msg.type === 'state') {
+        spotifyRestarts = 0;
+        const state = { ...msg, receivedAt: Date.now() };
+        // Cover art is only sent when the track changes; keep it for late
+        // listeners such as a reloaded window.
+        if (Object.prototype.hasOwnProperty.call(msg, 'cover')) spotifyLastCover = msg.cover || '';
+        if (!msg.available) spotifyLastCover = '';
+        spotifyLastState = { ...state };
+        delete spotifyLastState.cover;
+        sendSpotifyState(state);
+      } else if (msg.type === 'error') {
+        console.warn('[spotify]', msg.message);
+      }
+    }
+  });
+  child.stderr.on('data', d => console.warn('[spotify] stderr:', String(d).trim().slice(0, 300)));
+  child.on('error', e => console.warn('[spotify] could not start:', e.message));
+  child.on('exit', () => {
+    if (spotifyProc === child) spotifyProc = null;
+    if (!spotifyWanted) return;
+    // Unexpected exit: retry with backoff rather than respawning in a tight loop.
+    spotifyRestarts++;
+    const delay = Math.min(30000, 1000 * 2 ** Math.min(spotifyRestarts, 5));
+    clearTimeout(spotifyRestartTimer);
+    spotifyRestartTimer = setTimeout(() => { if (spotifyWanted) startSpotifyBridge(); }, delay);
+  });
+  return { ok: true };
+}
+
+function stopSpotifyBridge() {
+  spotifyWanted = false;
+  clearTimeout(spotifyRestartTimer);
+  if (spotifyProc) {
+    try { spotifyProc.stdin.end(); } catch {}
+    try { spotifyProc.kill(); } catch {}
+    spotifyProc = null;
+  }
+  spotifyLastState = { available: false };
+  spotifyLastCover = '';
+}
+
+const SPOTIFY_COMMANDS = new Set(['toggle', 'play', 'pause', 'next', 'prev', 'seek', 'shuffle']);
+
+ipcMain.handle('spotify:start', () => startSpotifyBridge());
+ipcMain.handle('spotify:stop', () => { stopSpotifyBridge(); return { ok: true }; });
+ipcMain.handle('spotify:get', () => ({ ...spotifyLastState, cover: spotifyLastCover }));
+ipcMain.handle('spotify:command', (_e, cmd, arg) => {
+  if (!SPOTIFY_COMMANDS.has(cmd)) return { error: 'Unknown command.' };
+  if (!spotifyProc) return { error: 'Not connected.' };
+  let line = cmd;
+  if (cmd === 'seek') {
+    const ms = Number(arg);
+    if (!Number.isFinite(ms) || ms < 0) return { error: 'Bad position.' };
+    line += ' ' + Math.round(ms);
+  }
+  if (cmd === 'shuffle') line += ' ' + (arg ? 'true' : 'false');
+  try {
+    spotifyProc.stdin.write(line + '\n');
+    return { ok: true };
+  } catch (e) {
+    return { error: e.message };
+  }
+});
+
+// ── Song artwork ──
+// Links carry a thumbnail in their metadata; local files often have cover art
+// embedded, which ffmpeg can extract. Either way the image is saved under
+// userData, so the library never depends on a remote URL staying valid.
+const COVER_DIR = path.join(app.getPath('userData'), 'covers');
+const inFlightCovers = new Map();
+
+function coverExtension(contentType, url) {
+  const t = String(contentType || '').toLowerCase();
+  if (t.includes('png')) return '.png';
+  if (t.includes('webp')) return '.webp';
+  if (t.includes('jpeg') || t.includes('jpg')) return '.jpg';
+  const m = String(url || '').match(/\.(jpe?g|png|webp)(?:[?#]|$)/i);
+  return m ? '.' + m[1].toLowerCase().replace('jpeg', 'jpg') : '.jpg';
+}
+
+function existingCover(key) {
+  for (const ext of ['.jpg', '.png', '.webp']) {
+    const p = path.join(COVER_DIR, key + ext);
+    try { if (fs.statSync(p).size > 0) return p; } catch {}
+  }
+  return '';
+}
+
+// Largest thumbnail wins; yt-dlp's single `thumbnail` field is usually it.
+function pickThumbnail(info) {
+  if (!info) return '';
+  if (typeof info.thumbnail === 'string' && isHttpUrl(info.thumbnail)) return info.thumbnail;
+  const list = Array.isArray(info.thumbnails) ? info.thumbnails.filter(t => t && isHttpUrl(t.url)) : [];
+  if (!list.length) return '';
+  list.sort((a, b) => ((b.width || 0) * (b.height || 0)) - ((a.width || 0) * (a.height || 0)));
+  return list[0].url;
+}
+
+async function downloadCover(url, key) {
+  if (!isHttpUrl(url)) return '';
+  const hit = existingCover(key);
+  if (hit) return hit;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    if (!res.ok) return '';
+    const type = res.headers.get('content-type') || '';
+    if (type && !/^image\//i.test(type)) return '';
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.length < 64 || buf.length > 8 * 1024 * 1024) return '';
+    fs.mkdirSync(COVER_DIR, { recursive: true });
+    const file = path.join(COVER_DIR, key + coverExtension(type, url));
+    fs.writeFileSync(file, buf);
+    return file;
+  } catch {
+    return '';
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function extractEmbeddedCover(filePath, key) {
+  const hit = existingCover(key);
+  if (hit) return Promise.resolve(hit);
+  const ffmpeg = findFfmpeg();
+  if (!ffmpeg) return Promise.resolve('');
+  fs.mkdirSync(COVER_DIR, { recursive: true });
+  const out = path.join(COVER_DIR, key + '.jpg');
+  // Audio files store art as an attached-picture video stream. Real video
+  // gets a frame a few seconds in, since the opening is often black.
+  const isVideo = /\.(mp4|mkv|avi|mov|m4v|wmv|3gp)$/i.test(filePath);
+  const args = ['-y', '-v', 'error', ...(isVideo ? ['-ss', '3'] : []), '-i', filePath,
+    '-an', '-map', '0:v:0', '-frames:v', '1',
+    '-vf', 'scale=320:320:force_original_aspect_ratio=increase,crop=320:320', out];
+  return new Promise(resolve => {
+    execFile(ffmpeg, args, { windowsHide: true, timeout: 20000 }, err => {
+      try { if (!err && fs.statSync(out).size > 0) return resolve(out); } catch {}
+      try { fs.unlinkSync(out); } catch {}
+      resolve('');
+    });
+  });
+}
+
+async function resolveSongCover({ path: filePath, sourceUrl } = {}) {
+  if (sourceUrl && isHttpUrl(sourceUrl)) {
+    const key = audioCacheKey(sourceUrl);
+    const hit = existingCover(key);
+    if (hit) return hit;
+    // Prefer metadata already resolved this session; otherwise ask yt-dlp for
+    // metadata only - no stream lookup, no download.
+    let thumb = pickThumbnail(onlineAudioCache.get(String(sourceUrl).trim()));
+    if (!thumb) {
+      try {
+        let target = sourceUrl;
+        if (/open\.spotify\.com|spotify\.link/i.test(sourceUrl)) {
+          const query = await spotifyToSearchQuery(sourceUrl);
+          if (!query) return '';
+          target = `ytsearch1:${query} official audio`;
+        }
+        const raw = await runYtDlp(target, { dumpSingleJson: true, skipDownload: true, noPlaylist: true, noWarnings: true, ignoreErrors: true });
+        thumb = pickThumbnail(Array.isArray(raw?.entries) ? raw.entries[0] : raw);
+      } catch {
+        return '';
+      }
+    }
+    return thumb ? downloadCover(thumb, key) : '';
+  }
+  if (typeof filePath === 'string' && filePath && !isHttpUrl(filePath)) {
+    let stat;
+    try { stat = fs.statSync(filePath); } catch { return ''; }
+    if (!stat.isFile()) return '';
+    // Keyed on size and mtime too, so a replaced file gets fresh artwork.
+    const key = crypto.createHash('sha1').update(filePath + '|' + stat.size + '|' + stat.mtimeMs).digest('hex');
+    return extractEmbeddedCover(filePath, key);
+  }
+  return '';
+}
+
+ipcMain.handle('song-cover', (_e, song) => {
+  const id = JSON.stringify([song?.path || '', song?.sourceUrl || '']);
+  if (inFlightCovers.has(id)) return inFlightCovers.get(id);
+  const job = resolveSongCover(song || {}).catch(() => '').finally(() => inFlightCovers.delete(id));
+  inFlightCovers.set(id, job);
+  return job;
+});
+
+// ── Spotify into the mic ──
+// A native addon captures only Spotify's audio (Windows per-app loopback), so
+// a Discord call on the same speakers is never sent back to the people in it.
+// Samples go to the window over a MessagePort, straight into an AudioWorklet.
+let spotifyCapture = null;
+try {
+  let addonPath = path.join(__dirname, 'native', 'build', 'Release', 'spotify_capture.node');
+  if (addonPath.includes('app.asar') && !addonPath.includes('app.asar.unpacked')) {
+    addonPath = addonPath.replace('app.asar', 'app.asar.unpacked');
+  }
+  spotifyCapture = require(addonPath);
+} catch (e) {
+  console.warn('Spotify capture addon not available:', e.message);
+}
+
+let spotifyAudioWanted = false;
+let spotifyAudioRate = 48000;
+let spotifyAudioPid = 0;
+let spotifyAudioChannel = null;
+let spotifyAudioWatch = null;
+
+function sendSpotifyAudioStatus(status) {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('spotify-audio:status', status);
+}
+
+function beginSpotifyCapture() {
+  const pid = spotifyCapture.findProcess('Spotify.exe');
+  if (!pid) {
+    try { spotifyCapture.stop(); } catch {}
+    spotifyAudioPid = 0;
+    sendSpotifyAudioStatus({ state: 'waiting', error: '' });
+    return false;
+  }
+  try { spotifyCapture.stop(); } catch {}
+  if (spotifyAudioChannel) { try { spotifyAudioChannel.port1.close(); } catch {} }
+
+  // A fresh port per capture: the page hands it to its worklet, and an old
+  // port from a reloaded page or an earlier capture is simply abandoned.
+  spotifyAudioChannel = new MessageChannelMain();
+  const port = spotifyAudioChannel.port1;
+  port.start();
+  mainWindow.webContents.postMessage('spotify-audio-port', null, [spotifyAudioChannel.port2]);
+
+  spotifyAudioPid = pid;
+  sendSpotifyAudioStatus({ state: 'starting', error: '', pid });
+  try {
+    spotifyCapture.start(pid, spotifyAudioRate, (type, payload) => {
+      if (type === 'audio') {
+        try { port.postMessage(payload); } catch {}
+      } else if (type === 'status') {
+        sendSpotifyAudioStatus({ ...payload, pid });
+      }
+    });
+  } catch (e) {
+    sendSpotifyAudioStatus({ state: 'error', error: e.message, pid });
+    return false;
+  }
+  return true;
+}
+
+function startSpotifyAudio(sampleRate) {
+  if (!spotifyCapture) return { error: 'Spotify capture is not available in this build.' };
+  if (!mainWindow || mainWindow.isDestroyed()) return { error: 'No window to send audio to.' };
+  spotifyAudioWanted = true;
+  spotifyAudioRate = Number(sampleRate) > 0 ? Math.round(Number(sampleRate)) : 48000;
+  beginSpotifyCapture();
+
+  // Spotify restarting gets a new process id, and Spotify may be opened after
+  // this is switched on: follow it rather than capturing a dead process.
+  clearInterval(spotifyAudioWatch);
+  spotifyAudioWatch = setInterval(() => {
+    if (!spotifyAudioWanted) return;
+    const pid = spotifyCapture.findProcess('Spotify.exe');
+    if (pid && (pid !== spotifyAudioPid || !spotifyCapture.isRunning())) {
+      beginSpotifyCapture();
+    } else if (!pid && spotifyAudioPid) {
+      try { spotifyCapture.stop(); } catch {}
+      spotifyAudioPid = 0;
+      sendSpotifyAudioStatus({ state: 'waiting', error: '' });
+    }
+  }, 3000);
+  return { ok: true };
+}
+
+function stopSpotifyAudio() {
+  spotifyAudioWanted = false;
+  clearInterval(spotifyAudioWatch);
+  spotifyAudioWatch = null;
+  try { spotifyCapture?.stop(); } catch {}
+  if (spotifyAudioChannel) {
+    try { spotifyAudioChannel.port1.close(); } catch {}
+    spotifyAudioChannel = null;
+  }
+  spotifyAudioPid = 0;
+}
+
+ipcMain.handle('spotify-audio:start', (_e, sampleRate) => startSpotifyAudio(sampleRate));
+ipcMain.handle('spotify-audio:stop', () => { stopSpotifyAudio(); return { ok: true }; });
+
 ipcMain.handle('get-open-at-login', () => {
   try { return app.getLoginItemSettings().openAtLogin; } catch { return false; }
 });
@@ -803,7 +1139,7 @@ ipcMain.handle('set-open-at-login', (_e, enabled) => {
 ipcMain.handle('resolve-link', async (_e, url) => {
   try {
     const entry = await ensureLocalAudio(url, p => sendDownloadProgress(url, p));
-    return { name: entry.name, path: entry.path, sourceUrl: url, durationMs: entry.durationMs, type: 'link' };
+    return { name: entry.name, path: entry.path, sourceUrl: url, durationMs: entry.durationMs, type: 'link', cover: entry.cover || '' };
   } catch (e) {
     return { error: e.message };
   }
