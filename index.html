@@ -192,6 +192,7 @@
     .soundpad-ctrl.danger:hover{background:rgba(248,113,113,.1);border-color:rgba(248,113,113,.3)}
     /* Right-click menu for a song. Transform and opacity only, so the open
        animation runs on the compositor and never janks against playback. */
+    .soundpad-stats button.on{color:var(--brand);border-color:var(--brand);background:var(--bg-selected)}
     .ctx-menu{position:fixed;z-index:4000;min-width:172px;padding:5px;background:var(--glass);backdrop-filter:blur(var(--glass-blur));border:1px solid var(--glass-border);border-radius:var(--radius-md);box-shadow:var(--shadow-lg);opacity:0;transform:scale(.92) translateY(-6px);transform-origin:top left;transition:opacity .13s cubic-bezier(.4,0,.2,1),transform .13s cubic-bezier(.34,1.4,.64,1)}
     .ctx-menu.open{opacity:1;transform:scale(1) translateY(0)}
     .ctx-menu.closing{opacity:0;transform:scale(.96) translateY(-4px);transition-duration:.09s}
@@ -208,6 +209,140 @@
     @keyframes app-boot{from{opacity:0;transform:scale(.985) translateY(8px)}to{opacity:1;transform:none}}
     .app-booting{opacity:0}
     .app-booted{animation:app-boot .42s cubic-bezier(.22,1,.36,1) both}
+    /* ── Layout picker (shown in both layouts) ── */
+    .layout-pick{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+    .layout-card{display:block;text-align:left;padding:12px;border-radius:var(--radius-md);border:1px solid var(--card-border);background:var(--card);color:var(--text);cursor:pointer;transition:border-color .15s,box-shadow .15s}
+    .layout-card:hover{border-color:var(--brand)}
+    .layout-card.active{border-color:var(--brand);box-shadow:0 0 0 1px var(--brand)}
+    .layout-thumb{display:grid;height:70px;border-radius:6px;overflow:hidden;gap:3px;padding:4px;background:rgba(0,0,0,.35);margin-bottom:8px}
+    .layout-thumb span{display:block;border-radius:3px;background:rgba(255,255,255,.12)}
+    .layout-thumb-classic{grid-template-rows:12px 1fr}
+    .layout-thumb-classic span:nth-child(1){background:rgba(255,255,255,.22)}
+    .layout-thumb-classic span:nth-child(3){display:none}
+    .layout-thumb-studio{grid-template-columns:28% 1fr;grid-template-rows:1fr 14px}
+    .layout-thumb-studio span:nth-child(3){grid-column:1 / -1;background:var(--brand);opacity:.7}
+    .layout-name{display:block;font-size:12px;font-weight:700;color:var(--header)}
+    .layout-desc{display:block;font-size:10px;color:var(--text-muted);margin-top:2px}
+
+    /* ── Studio layout ──
+       A music-player shell. The feature panels are the same DOM nodes Classic
+       uses, moved in rather than rebuilt, so every control keeps its wiring.
+       Surfaces are flat neutrals; only the accent follows the theme. */
+    #studioShell{display:none}
+    html.layout-studio #studioShell{display:grid;position:fixed;top:34px;left:0;right:0;bottom:0;z-index:5;grid-template-columns:272px minmax(0,1fr);grid-template-rows:minmax(0,1fr) 84px;gap:8px;padding:8px 8px 0;background:#000;color:#fff;
+      --card:rgba(255,255,255,.04);--card-hover:rgba(255,255,255,.07);--card-border:rgba(255,255,255,.07);--glass:#181818;--glass-border:#2a2a2a;--input-bg:#242424;--text:#e8e8e8;--text-muted:#a7a7a7;--header:#fff;--bg-hover:#2a2a2a}
+    html.layout-studio .app,html.layout-studio #bgVideo{display:none !important}
+    html.layout-studio body{background:#000 !important}
+    html.layout-studio .titlebar{background:#000;backdrop-filter:none;border-bottom:none}
+    .st-card{background:#121212;border-radius:8px}
+    .st-side{display:flex;flex-direction:column;gap:8px;min-height:0}
+    .st-nav{padding:8px}
+    .st-nav-item{display:flex;align-items:center;gap:14px;width:100%;padding:10px 12px;border:none;background:none;color:#b3b3b3;font-size:14px;font-weight:700;border-radius:6px;cursor:pointer;text-align:left;transition:color .15s,background .15s}
+    .st-nav-item svg{width:22px;height:22px;flex-shrink:0}
+    .st-nav-item:hover{color:#fff}
+    .st-nav-item.active{color:#fff;background:#1f1f1f}
+    .st-nav-item.small{font-size:13px;padding:8px 12px;font-weight:600}
+    .st-nav-item.small svg{width:18px;height:18px}
+    .st-lib{flex:1;min-height:0;display:flex;flex-direction:column;padding:8px}
+    .st-lib-head{display:flex;align-items:center;justify-content:space-between;padding:8px 8px 8px 12px;color:#b3b3b3;font-weight:700;font-size:14px}
+    .st-lib-head>span{display:flex;align-items:center;gap:12px}
+    .st-lib-head svg{width:22px;height:22px}
+    .st-lib-list{flex:1;overflow-y:auto;min-height:60px}
+    .st-lib-item{display:flex;align-items:center;gap:12px;width:100%;padding:8px;border:none;background:none;border-radius:6px;cursor:pointer;color:#fff;text-align:left;transition:background .12s}
+    .st-lib-item:hover{background:#1a1a1a}
+    .st-lib-item.active{background:#232323}
+    .st-lib-cover{width:46px;height:46px;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff;font-weight:800;font-size:17px}
+    .st-lib-text{min-width:0;display:block}
+    .st-lib-name{display:block;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .st-lib-item.active .st-lib-name{color:var(--brand)}
+    .st-lib-meta{display:block;font-size:12px;color:#b3b3b3;margin-top:3px}
+    .st-lib-sep{height:1px;background:#282828;margin:8px 12px}
+    .st-main{overflow-y:auto;min-width:0;position:relative;scrollbar-width:thin;scrollbar-color:#3a3a3a transparent}
+    .st-view{display:none;padding:0 24px 40px}
+    .st-view.active{display:block;animation:st-view-in .28s cubic-bezier(.22,1,.36,1)}
+    @keyframes st-view-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+    .st-title{font-size:32px;font-weight:800;letter-spacing:-.02em;padding:28px 0 18px;color:#fff}
+    .st-hero{display:flex;align-items:flex-end;gap:24px;padding:56px 24px 24px;margin:0 -24px;background:linear-gradient(180deg,color-mix(in srgb,var(--brand) 55%,#121212) 0%,#121212 100%);border-radius:8px 8px 0 0}
+    .st-hero-art{width:192px;height:192px;border-radius:6px;background:linear-gradient(135deg,var(--brand),color-mix(in srgb,var(--brand) 30%,#000));display:flex;align-items:center;justify-content:center;box-shadow:0 8px 40px rgba(0,0,0,.5);flex-shrink:0}
+    .st-hero-art svg{width:76px;height:76px;color:#fff}
+    .st-hero-text{min-width:0}
+    .st-eyebrow{font-size:13px;font-weight:600;color:#fff}
+    .st-hero h1{font-size:clamp(34px,5vw,72px);font-weight:900;letter-spacing:-.04em;line-height:1.02;margin:8px 0 12px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .st-hero-meta{font-size:14px;color:#fff;opacity:.85;font-weight:600}
+    .st-actions{display:flex;align-items:center;gap:20px;padding:24px 0}
+    .st-play-big{width:56px;height:56px;border-radius:50%;border:none;background:var(--brand);color:#000;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .15s,filter .15s}
+    .st-play-big:hover{transform:scale(1.05);filter:brightness(1.08)}
+    .st-play-big svg{width:24px;height:24px}
+    .st-icon-btn{width:36px;height:36px;border-radius:50%;border:none;background:none;color:#b3b3b3;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:color .15s,transform .15s}
+    .st-icon-btn:hover{color:#fff;transform:scale(1.06)}
+    .st-icon-btn svg{width:26px;height:26px}
+    .st-icon-btn.sm svg{width:20px;height:20px}
+    .st-icon-btn.on,.st-ctl.on{color:var(--brand)}
+    .st-player{grid-column:1 / -1;display:grid;grid-template-columns:30% minmax(0,1fr) 30%;align-items:center;padding:0 8px;background:#000}
+    .st-now{display:flex;align-items:center;gap:12px;min-width:0}
+    .st-now-art{width:56px;height:56px;border-radius:4px;background:#282828;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#b3b3b3}
+    .st-now-art svg{width:24px;height:24px}
+    .st-now-text{min-width:0}
+    .st-now-title{font-size:14px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .st-now-sub{font-size:12px;color:#b3b3b3;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .st-center{display:flex;flex-direction:column;align-items:center;gap:6px;max-width:720px;width:100%;justify-self:center}
+    .st-controls{display:flex;align-items:center;gap:18px}
+    .st-ctl{width:32px;height:32px;border:none;background:none;color:#b3b3b3;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:50%;transition:color .15s,transform .15s}
+    .st-ctl:hover{color:#fff}
+    .st-ctl svg{width:18px;height:18px}
+    .st-ctl-play{width:34px;height:34px;background:#fff;color:#000}
+    .st-ctl-play:hover{color:#000;transform:scale(1.06)}
+    .st-ctl-play svg{width:16px;height:16px}
+    .st-progress{display:flex;align-items:center;gap:8px;width:100%;font-size:11px;color:#b3b3b3;font-variant-numeric:tabular-nums}
+    .st-progress span{min-width:34px;text-align:center}
+    .st-progress input{flex:1}
+    .st-player input[type=range]{-webkit-appearance:none;appearance:none;height:4px;border-radius:2px;background:linear-gradient(to right,#fff var(--pct,0%),#4d4d4d var(--pct,0%));cursor:pointer;margin:0}
+    .st-player input[type=range]:hover{background:linear-gradient(to right,var(--brand) var(--pct,0%),#4d4d4d var(--pct,0%))}
+    .st-player input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:#fff;opacity:0;transition:opacity .15s}
+    .st-player input[type=range]:hover::-webkit-slider-thumb{opacity:1}
+    .st-right{display:flex;align-items:center;justify-content:flex-end;gap:14px;min-width:0}
+    .st-mic{display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;border:1px solid #333;background:none;color:#b3b3b3;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;transition:color .15s,border-color .15s}
+    .st-mic:hover{color:#fff;border-color:#555}
+    .st-mic.on{color:#fff;border-color:var(--brand)}
+    .st-mic-dot{width:8px;height:8px;border-radius:50%;background:#555;transition:background .15s}
+    .st-mic.on .st-mic-dot{background:var(--brand);box-shadow:0 0 8px var(--brand)}
+    .st-meter{width:44px;height:4px;border-radius:2px;background:#333;overflow:hidden;flex-shrink:0}
+    .st-meter div{height:100%;width:0;background:var(--brand);transition:width .08s}
+    .st-vol{display:flex;align-items:center;gap:8px;color:#b3b3b3}
+    .st-vol svg{width:18px;height:18px;flex-shrink:0}
+    .st-vol input{width:100px}
+
+    /* Re-docked panels: drop Classic's glass, keep the controls. */
+    html.layout-studio .st-view .mic-section{background:#181818;border:none;border-radius:8px;backdrop-filter:none;margin-top:0;margin-bottom:16px;padding:20px}
+    html.layout-studio .st-view .mic-section h3{font-size:16px;color:#fff}
+    html.layout-studio .st-view .tab-content{display:block !important;padding:0}
+    html.layout-studio .st-view .subtab-content{display:block !important}
+    html.layout-studio #soundpadNowbar,
+    html.layout-studio #panelSoundpad .soundpad-title,
+    html.layout-studio #soundpadCatbar,
+    html.layout-studio #panelSoundpad .eq-gain-row:has(#eqVolumeSlider){display:none !important}
+    html.layout-studio #panelEqEnabled{margin-bottom:14px;font-size:13px;color:#b3b3b3}
+    html.layout-studio #panelSoundpad .soundpad-section{background:none;border:none;padding:0;box-shadow:none}
+    html.layout-studio #panelSoundpad .soundpad-search{background:#242424;border:1px solid transparent;border-radius:999px;color:#fff;padding:8px 14px}
+    html.layout-studio #panelSoundpad .soundpad-search:focus{border-color:#555}
+    html.layout-studio .soundpad-grid{max-height:none;gap:0;overflow:visible;counter-reset:st-track;margin-top:8px}
+    html.layout-studio .soundpad-tile{display:grid;grid-template-columns:36px minmax(0,1fr) 150px 110px 40px;align-items:center;gap:12px;background:none;border:none;border-radius:6px;padding:8px 12px;transition:background .12s;counter-increment:st-track}
+    html.layout-studio .soundpad-tile::before{content:counter(st-track);color:#b3b3b3;font-size:15px;font-variant-numeric:tabular-nums;text-align:center}
+    html.layout-studio .soundpad-tile:hover{background:#2a2a2a;transform:none;border:none}
+    html.layout-studio .soundpad-tile.active{background:#2a2a2a;box-shadow:none;border:none}
+    html.layout-studio .soundpad-tile.active .soundpad-name,
+    html.layout-studio .soundpad-tile.active::before{color:var(--brand)}
+    html.layout-studio .soundpad-name{font-size:15px;color:#fff;font-weight:500}
+    html.layout-studio .soundpad-cat-pick{background:none;border:none;color:#b3b3b3;font-size:13px;max-width:none}
+    html.layout-studio .soundpad-controls .soundpad-ctrl{background:none;border:none;color:#fff;opacity:0;width:32px;height:32px;font-size:13px}
+    html.layout-studio .soundpad-tile:hover .soundpad-ctrl,
+    html.layout-studio .soundpad-tile.active .soundpad-ctrl{opacity:1}
+    html.layout-studio .soundpad-tile:hover .soundpad-ctrl:hover{transform:scale(1.1);background:none}
+    /* Classic leftovers that read wrong in Studio: the dashed drop-zone frame,
+       and the small Shuffle button that the header and player bar replace. */
+    html.layout-studio #soundpadDrop{border:none;background:none;padding:0;box-shadow:none}
+    html.layout-studio #soundpadShuffleBtn{display:none}
+
     .soundpad-nowbar{display:none;margin:0 0 12px;padding:14px 16px;background:linear-gradient(135deg,rgba(196,113,245,.06),rgba(124,92,252,.04));border:1px solid rgba(196,113,245,.15);border-radius:var(--radius-md);backdrop-filter:blur(12px);box-shadow:0 0 30px rgba(196,113,245,.05)}
     .soundpad-nowbar.show{display:block;animation:fadeSlideIn .4s cubic-bezier(.16,1,.3,1)}
     .soundpad-nowrow{display:flex;align-items:center;gap:10px}
@@ -426,6 +561,87 @@
   document.documentElement.classList.add('app-booting');
 </script>
 <div class="toast-container" id="toastContainer"></div>
+<!-- Studio layout shell. Hidden in Classic; panels are moved in on switch. -->
+<div id="studioShell" aria-hidden="true">
+  <aside class="st-side">
+    <nav class="st-card st-nav">
+      <button class="st-nav-item" data-view="soundpad"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3.2 2.5 11h2.7v9.8h5.3v-6h3v6h5.3V11h2.7z"/></svg><span>SoundPad + DJ</span></button>
+      <button class="st-nav-item" data-view="eq"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg><span>EQ &amp; Effects</span></button>
+      <button class="st-nav-item" data-view="mic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8"/></svg><span>Microphone</span></button>
+      <button class="st-nav-item" data-view="presets"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="m12 2.5 2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z"/></svg><span>Presets</span></button>
+    </nav>
+    <div class="st-card st-lib">
+      <div class="st-lib-head">
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 3v18M9 3v18M14 4l6 16"/></svg>Your Library</span>
+        <button class="st-icon-btn sm" onclick="soundpadAddFile()" title="Add songs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+      </div>
+      <div class="st-lib-list" id="stLibList"></div>
+      <div class="st-lib-sep"></div>
+      <button class="st-nav-item small" data-view="camera"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m23 7-7 5 7 5z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg><span>Camera</span></button>
+      <button class="st-nav-item small" data-view="ai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg><span>AI Voice Changer</span></button>
+      <button class="st-nav-item small" data-view="recorder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4" fill="currentColor"/></svg><span>Screen Recorder</span></button>
+      <button class="st-nav-item small" data-view="apo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h3l3-8 4 16 3-8h7"/></svg><span>Equalizer APO</span></button>
+      <button class="st-nav-item small" data-view="themes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg><span>Settings &amp; Themes</span></button>
+    </div>
+  </aside>
+
+  <main class="st-card st-main" id="stMain">
+    <section class="st-view" data-view="soundpad">
+      <header class="st-hero">
+        <div class="st-hero-art"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+        <div class="st-hero-text">
+          <div class="st-eyebrow">Playlist</div>
+          <h1 id="stHeroTitle">SoundPad + DJ</h1>
+          <div class="st-hero-meta" id="stHeroMeta"></div>
+        </div>
+      </header>
+      <div class="st-actions">
+        <button class="st-play-big" id="stBigPlay" onclick="studioPlayPause()" title="Play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.14v13.72a1 1 0 0 0 1.52.85l10.29-6.86a1 1 0 0 0 0-1.7L9.52 4.29A1 1 0 0 0 8 5.14z"/></svg></button>
+        <button class="st-icon-btn" id="stShuffleBig" onclick="soundpadShuffleClick()" title="Shuffle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="m4 4 5 5"/></svg></button>
+        <button class="st-icon-btn" onclick="soundpadAddFile()" title="Add songs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+      </div>
+      <div class="st-slot" data-slot="soundpad"></div>
+    </section>
+    <section class="st-view" data-view="eq"><h1 class="st-title">EQ &amp; Effects</h1><div class="st-slot" data-slot="eqEnabled"></div><div class="st-slot" data-slot="eq"></div></section>
+    <section class="st-view" data-view="mic"><h1 class="st-title">Microphone</h1><div class="st-slot" data-slot="mic"></div></section>
+    <section class="st-view" data-view="presets"><h1 class="st-title">Presets</h1><div class="st-slot" data-slot="presets"></div></section>
+    <section class="st-view" data-view="camera"><h1 class="st-title">Camera</h1><div class="st-slot" data-slot="camera"></div></section>
+    <section class="st-view" data-view="ai"><h1 class="st-title">AI Voice Changer</h1><div class="st-slot" data-slot="ai"></div></section>
+    <section class="st-view" data-view="recorder"><h1 class="st-title">Screen Recorder</h1><div class="st-slot" data-slot="recorder"></div></section>
+    <section class="st-view" data-view="apo"><h1 class="st-title">Equalizer APO</h1><div class="st-slot" data-slot="apo"></div></section>
+    <section class="st-view" data-view="themes"><h1 class="st-title">Settings &amp; Themes</h1><div class="st-slot" data-slot="themes"></div></section>
+  </main>
+
+  <footer class="st-player">
+    <div class="st-now">
+      <div class="st-now-art"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+      <div class="st-now-text">
+        <div class="st-now-title" id="stNowTitle">Nothing playing</div>
+        <div class="st-now-sub" id="stNowSub">Pick a song</div>
+      </div>
+    </div>
+    <div class="st-center">
+      <div class="st-controls">
+        <button class="st-ctl" id="stShuffle" onclick="soundpadShuffleClick()" title="Shuffle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="m4 4 5 5"/></svg></button>
+        <button class="st-ctl" onclick="studioPrev()" title="Previous"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 5.5v13a1 1 0 0 1-1.55.83L9 13.5V18a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v4.5l8.45-5.83A1 1 0 0 1 19 5.5z"/></svg></button>
+        <button class="st-ctl st-ctl-play" id="stPlay" onclick="studioPlayPause()" title="Play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.14v13.72a1 1 0 0 0 1.52.85l10.29-6.86a1 1 0 0 0 0-1.7L9.52 4.29A1 1 0 0 0 8 5.14z"/></svg></button>
+        <button class="st-ctl" onclick="studioNext()" title="Next"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 5.5v13a1 1 0 0 0 1.55.83L15 13.5V18a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-1a1 1 0 0 0-1 1v4.5L6.55 4.67A1 1 0 0 0 5 5.5z"/></svg></button>
+        <button class="st-ctl" onclick="soundpadSeek(10000)" title="Skip 10 seconds"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></button>
+      </div>
+      <div class="st-progress">
+        <span id="stTimeNow">0:00</span>
+        <input type="range" id="stSeek" min="0" max="1000" value="0" oninput="studioSeekPreview(this.value)" onchange="studioSeekCommit(this.value)">
+        <span id="stTimeTotal">0:00</span>
+      </div>
+    </div>
+    <div class="st-right">
+      <button class="st-mic" id="stMicBtn" onclick="toggleMic()" title="Start or stop the microphone"><span class="st-mic-dot"></span><span id="stMicLabel">Mic off</span></button>
+      <div class="st-meter"><div id="stMicMeter"></div></div>
+      <div class="st-vol"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg><input type="range" id="stVolume" min="0" max="200" value="100" oninput="studioSetVolume(this.value)" title="Music volume"></div>
+    </div>
+  </footer>
+</div>
+
 <div class="titlebar">
   <span class="titlebar-title">Custom Mic</span>
   <button class="screenshare-toggle" id="screenshareHideToggle" onclick="toggleScreenshareHide()" title="Best effort: hides this app from Discord/Windows screen capture">
@@ -445,7 +661,7 @@
       <div class="brand-lockup">
         <h2>Custom Mic</h2>
       </div>
-      <div class="eq-header-right">
+      <div class="eq-header-right" id="panelEqEnabled">
         <label><input type="checkbox" id="eqEnabled" checked> EQ Enabled</label>
       </div>
     </div>
@@ -461,7 +677,7 @@
     <!-- Soundpad Tab -->
     <div class="tab-content active" id="tab-soundpad">
       <!-- Mic Processing -->
-      <div class="mic-section">
+      <div class="mic-section" id="panelMic">
         <h3>Microphone Processing</h3>
         <div style="display:flex;gap:8px;align-items:center">
           <button class="mic-btn start" id="micBtn" onclick="toggleMic()">Start Mic</button>
@@ -541,7 +757,7 @@
       </div>
 
       <div class="subtab-content active" id="sub-soundpad">
-
+      <div id="panelSoundpad">
       <div class="soundpad-nowbar" id="soundpadNowbar">
         <div class="soundpad-nowrow">
           <span class="soundpad-nowtitle" id="soundpadNowTitle">No audio playing</span>
@@ -601,6 +817,7 @@
                 <option value="az">A → Z</option>
                 <option value="za">Z → A</option>
               </select>
+              <button id="soundpadShuffleBtn" onclick="soundpadShuffleClick()" title="Shuffle: play a random song, and keep picking random songs when one ends">&#8645; Shuffle</button>
               <button onclick="soundpadScrollToPlaying()" title="Scroll to now playing">Now Playing</button>
             </span>
           </div>
@@ -609,6 +826,8 @@
           <div class="soundpad-empty" id="soundpadEmpty">Drag &amp; drop audio files here</div>
         </div>
       </div>
+      </div>
+      <div id="panelEq">
       <div class="eq-gain-row" style="margin-bottom:8px">
         <label>EQ Target:</label>
         <select id="eqTarget" onchange="eqChangeTarget()" style="background:#1a1b1e;color:var(--text);border:1px solid #303238;border-radius:4px;padding:4px 8px;font-size:12px;flex:1;max-width:160px"><option value="all">Mic + Music</option><option value="music">Music Only</option></select>
@@ -775,6 +994,7 @@
         </div>
       </div>
       </div>
+      </div>
 
       <div class="subtab-content" id="sub-presets">
       <div>
@@ -814,6 +1034,22 @@
     <!-- Themes Tab -->
     <div class="tab-content" id="tab-themes">
       <div class="mic-section">
+        <h3>Layout</h3>
+        <div class="layout-pick">
+          <button class="layout-card" data-layout="classic" onclick="setAppLayout('classic')">
+            <span class="layout-thumb layout-thumb-classic"><span></span><span></span><span></span></span>
+            <span class="layout-name">Classic</span>
+            <span class="layout-desc">The original tabbed layout.</span>
+          </button>
+          <button class="layout-card" data-layout="studio" onclick="setAppLayout('studio')">
+            <span class="layout-thumb layout-thumb-studio"><span></span><span></span><span></span></span>
+            <span class="layout-name">Studio</span>
+            <span class="layout-desc">Music-player layout: library sidebar, player bar, a view for everything.</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="mic-section" style="margin-top:12px">
         <h3>Colour Theme</h3>
         <div class="theme-grid" id="themePresetGrid"></div>
 
@@ -1266,6 +1502,7 @@ const THEME_PRESETS = {
   mono:    { name: 'Mono',    brand: '#9ca3af', accent: '#d1d5db', bg: '#060708', card: '#ffffff', text: '#d6d8dc' },
   midnight:{ name: 'Midnight',brand: '#6366f1', accent: '#8b5cf6', bg: '#03040a', card: '#ffffff', text: '#d3d5e4' },
   gold:    { name: 'Gold',    brand: '#fbbf24', accent: '#fcd34d', bg: '#0a0803', card: '#ffffff', text: '#e6e0d0' },
+  emerald: { name: 'Emerald', brand: '#1ed760', accent: '#1db954', bg: '#000000', card: '#ffffff', text: '#e8e8e8' },
 };
 
 let currentTheme = { preset: 'purple', ...THEME_PRESETS.purple };
@@ -1488,6 +1725,281 @@ const micExtrasVisible = false;
   else window.addEventListener('load', run, { once: true });
 })();
 
+// ── Layout: Classic / Studio ──
+// Studio does not rebuild any feature. Each panel below is the same DOM node
+// Classic shows; switching layouts moves it into a Studio slot and leaves a
+// comment marker where it came from, so switching back restores it exactly and
+// every listener, id and piece of state survives the trip.
+const STUDIO_PANELS = [
+  { id: 'panelMic', slot: 'mic' },
+  { id: 'panelSoundpad', slot: 'soundpad' },
+  { id: 'panelEqEnabled', slot: 'eqEnabled' },
+  { id: 'panelEq', slot: 'eq' },
+  { id: 'sub-presets', slot: 'presets' },
+  { id: 'tab-obs', slot: 'camera' },
+  { id: 'tab-voicemod', slot: 'ai' },
+  { id: 'tab-recorder', slot: 'recorder' },
+  { id: 'tab-apo', slot: 'apo' },
+  { id: 'tab-themes', slot: 'themes' },
+];
+
+const ST_ICON_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.14v13.72a1 1 0 0 0 1.52.85l10.29-6.86a1 1 0 0 0 0-1.7L9.52 4.29A1 1 0 0 0 8 5.14z"/></svg>';
+const ST_ICON_PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
+
+let appLayout = 'classic';
+let studioView = 'soundpad';
+let studioTimer = null;
+let studioSeeking = false;
+let studioLibKey = '';
+const studioMarkers = new Map();
+
+try { studioView = localStorage.getItem('studio-view') || 'soundpad'; } catch {}
+
+function setAppLayout(layout) {
+  const next = layout === 'studio' ? 'studio' : 'classic';
+  if (next === appLayout) { syncLayoutCards(); return; }
+  if (next === 'studio') dockIntoStudio(); else undockFromStudio();
+  appLayout = next;
+  document.documentElement.classList.toggle('layout-studio', next === 'studio');
+  document.getElementById('studioShell')?.setAttribute('aria-hidden', next === 'studio' ? 'false' : 'true');
+  try { localStorage.setItem('app-layout', next); } catch {}
+  syncLayoutCards();
+  if (next === 'studio') {
+    renderStudioLibrary(true);
+    setStudioView(studioView);
+    startStudioTick();
+  } else {
+    stopStudioTick();
+    // The EQ canvas was sized for its Studio slot; redraw for Classic.
+    if (typeof eqDrawGraph === 'function') requestAnimationFrame(() => { try { eqDrawGraph(); } catch {} });
+  }
+}
+
+function dockIntoStudio() {
+  const shell = document.getElementById('studioShell');
+  if (!shell) return;
+  for (const { id, slot } of STUDIO_PANELS) {
+    const el = document.getElementById(id);
+    const target = shell.querySelector('[data-slot="' + slot + '"]');
+    if (!el || !target || studioMarkers.has(id)) continue;
+    const marker = document.createComment('studio:' + id);
+    el.parentNode.insertBefore(marker, el);
+    studioMarkers.set(id, marker);
+    target.appendChild(el);
+  }
+}
+
+function undockFromStudio() {
+  for (const { id } of STUDIO_PANELS) {
+    const el = document.getElementById(id);
+    const marker = studioMarkers.get(id);
+    if (!el || !marker || !marker.parentNode) continue;
+    marker.parentNode.insertBefore(el, marker);
+    marker.remove();
+    studioMarkers.delete(id);
+  }
+}
+
+function syncLayoutCards() {
+  document.querySelectorAll('.layout-card').forEach(card =>
+    card.classList.toggle('active', card.dataset.layout === appLayout));
+}
+
+function setStudioView(view) {
+  const shell = document.getElementById('studioShell');
+  if (!shell) return;
+  if (!shell.querySelector('.st-view[data-view="' + view + '"]')) view = 'soundpad';
+  studioView = view;
+  try { localStorage.setItem('studio-view', view); } catch {}
+  shell.querySelectorAll('.st-view').forEach(v => v.classList.toggle('active', v.dataset.view === view));
+  shell.querySelectorAll('.st-nav-item').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+  document.getElementById('stMain')?.scrollTo({ top: 0 });
+  // Canvas-backed panels size themselves from their container, which is
+  // zero-wide until the view is on screen.
+  if (view === 'eq' && typeof eqDrawGraph === 'function') requestAnimationFrame(() => { try { eqDrawGraph(); } catch {} });
+  if (view === 'soundpad') renderStudioLibrary(true);
+}
+
+/* ── sidebar library: one entry per category, like playlists ── */
+
+function renderStudioLibrary(force) {
+  const list = document.getElementById('stLibList');
+  if (!list) return;
+  const files = soundpadGetFiles();
+  const cats = soundpadGetCategories();
+  const counts = {};
+  files.forEach(f => { const c = f.category || 'Uncategorized'; counts[c] = (counts[c] || 0) + 1; });
+  const key = JSON.stringify([cats, counts, soundpadActiveCategory, files.length]);
+  if (!force && key === studioLibKey) return;
+  studioLibKey = key;
+
+  const entries = [['All', files.length], ...cats.map(c => [c, counts[c] || 0])];
+  list.innerHTML = entries.map(([name, n]) => {
+    const active = soundpadActiveCategory === name;
+    // A stable colour per category, so a playlist keeps its cover.
+    const hue = [...name].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) % 360, 7);
+    const cover = name === 'All'
+      ? 'background:linear-gradient(135deg,var(--brand),color-mix(in srgb,var(--brand) 25%,#000))'
+      : 'background:hsl(' + hue + ' 42% 30%)';
+    const glyph = name === 'All' ? '&#9829;' : esc(name.charAt(0).toUpperCase());
+    return '<button class="st-lib-item' + (active ? ' active' : '') + '" data-cat="' + encodeURIComponent(name) + '">' +
+      '<span class="st-lib-cover" style="' + cover + '">' + glyph + '</span>' +
+      '<span class="st-lib-text"><span class="st-lib-name">' + esc(name === 'All' ? 'All songs' : name) + '</span>' +
+      '<span class="st-lib-meta">Playlist &middot; ' + n + ' song' + (n === 1 ? '' : 's') + '</span></span>' +
+      '</button>';
+  }).join('');
+}
+
+/* ── player bar ── */
+
+function stSetText(id, text) {
+  const el = document.getElementById(id);
+  if (el && el.textContent !== text) el.textContent = text;
+}
+
+function stSetIcon(id, playing) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const want = playing ? 'pause' : 'play';
+  if (el.dataset.icon === want) return;
+  el.dataset.icon = want;
+  el.innerHTML = playing ? ST_ICON_PAUSE : ST_ICON_PLAY;
+  el.title = playing ? 'Pause' : 'Play';
+}
+
+function studioTick() {
+  if (appLayout !== 'studio') return;
+  const files = soundpadGetFiles();
+  const active = !!soundpadState.path && soundpadState.state !== 'stopped';
+  const playing = soundpadState.state === 'playing';
+  const file = active ? files.find(f => f.path === soundpadState.path) : null;
+
+  stSetText('stNowTitle', file ? file.name : 'Nothing playing');
+  stSetText('stNowSub', file
+    ? (soundpadState.state === 'paused' ? 'Paused · ' : '') + (file.category || 'Uncategorized')
+    : (files.length ? 'Pick a song, or press shuffle' : 'Add songs to get started'));
+  stSetIcon('stPlay', playing);
+  stSetIcon('stBigPlay', playing);
+  ['stShuffle', 'stShuffleBig'].forEach(id => document.getElementById(id)?.classList.toggle('on', soundpadShuffle));
+
+  const duration = soundpadState.durationMs || 0;
+  const seek = document.getElementById('stSeek');
+  if (seek && !studioSeeking) {
+    const position = active ? soundpadCurrentOffsetMs() : 0;
+    const value = duration ? Math.round((position / duration) * 1000) : 0;
+    seek.value = value;
+    seek.style.setProperty('--pct', (value / 10) + '%');
+    stSetText('stTimeNow', soundpadFmt(position));
+  }
+  stSetText('stTimeTotal', soundpadFmt(duration));
+
+  // Music volume has one source of truth: the Classic slider. This bar only
+  // mirrors it and writes through it.
+  const vol = document.getElementById('stVolume');
+  if (vol) {
+    if (document.activeElement !== vol) vol.value = Math.max(0, Math.min(200, volume));
+    vol.style.setProperty('--pct', Math.min(100, (Number(vol.value) / 200) * 100) + '%');
+  }
+
+  document.getElementById('stMicBtn')?.classList.toggle('on', !!micActive);
+  stSetText('stMicLabel', micActive ? 'Mic on' : 'Mic off');
+  const meter = document.getElementById('stMicMeter');
+  if (meter) meter.style.width = micActive ? (document.getElementById('micMeter')?.style.width || '0') : '0';
+
+  const cat = soundpadActiveCategory;
+  stSetText('stHeroTitle', cat === 'All' ? 'SoundPad + DJ' : cat);
+  const shown = cat === 'All' ? files.length : files.filter(f => (f.category || 'Uncategorized') === cat).length;
+  stSetText('stHeroMeta',
+    shown + ' song' + (shown === 1 ? '' : 's') +
+    (soundpadQueue.length ? ' · ' + soundpadQueue.length + ' queued' : '') +
+    (soundpadShuffle ? ' · shuffle on' : ''));
+
+  renderStudioLibrary(false);
+}
+
+function startStudioTick() {
+  stopStudioTick();
+  studioTick();
+  studioTimer = setInterval(studioTick, 250);
+}
+
+function stopStudioTick() {
+  if (studioTimer) clearInterval(studioTimer);
+  studioTimer = null;
+}
+
+// Play respects what the view shows: an idle press starts the current
+// playlist (random when shuffle is on) instead of the first song overall.
+function studioPlayPause() {
+  const idle = !currentAudio || soundpadState.state === 'stopped';
+  if (!idle) { soundpadToggleTransport(); return; }
+  const pool = soundpadShufflePool();
+  if (!pool.length) { showToast('Add a song first.', ''); return; }
+  if (soundpadShuffle) soundpadPlayRandom();
+  else soundpadPlayFile(pool[0]);
+}
+
+function studioNext() {
+  if (soundpadQueue.length) { playNextFromQueue(); return; }
+  soundpadPlayRandom();
+}
+
+// Like a music player: a few seconds in, "previous" restarts the song; right
+// at the start it goes back to the song played before.
+function studioPrev() {
+  if (currentAudio && currentAudio.currentTime > 3) {
+    currentAudio.currentTime = 0;
+    soundpadUpdateNowbar();
+    return;
+  }
+  const previous = soundpadShuffleHistory.find(p => p !== soundpadState.path);
+  const file = previous && soundpadGetFiles().find(f => f.path === previous);
+  if (file) soundpadPlayFile(file);
+  else if (currentAudio) currentAudio.currentTime = 0;
+}
+
+function studioSeekPreview(value) {
+  studioSeeking = true;
+  document.getElementById('stSeek')?.style.setProperty('--pct', (Number(value) / 10) + '%');
+  stSetText('stTimeNow', soundpadFmt((Number(value) / 1000) * (soundpadState.durationMs || 0)));
+}
+
+function studioSeekCommit(value) {
+  seekTo(value);
+  studioSeeking = false;
+}
+
+function studioSetVolume(value) {
+  const slider = document.getElementById('eqVolumeSlider');
+  if (!slider) return;
+  slider.value = value;
+  slider.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+function initAppLayout() {
+  const shell = document.getElementById('studioShell');
+  if (!shell || shell.dataset.ready) return;
+  shell.dataset.ready = '1';
+  shell.addEventListener('click', e => {
+    const nav = e.target.closest('.st-nav-item[data-view]');
+    if (nav) { setStudioView(nav.dataset.view); return; }
+    const lib = e.target.closest('.st-lib-item[data-cat]');
+    if (lib) {
+      soundpadSetCategory(decodeURIComponent(lib.dataset.cat));
+      setStudioView('soundpad');
+    }
+  });
+  let saved = 'classic';
+  try { saved = localStorage.getItem('app-layout') || 'classic'; } catch {}
+  if (saved === 'studio') setAppLayout('studio');
+  else syncLayoutCards();
+}
+
+// Deferred: this sits above declarations it reads (soundpad state, the queue,
+// volume), which are only initialised once the rest of the script has run.
+// The boot animation keeps the window hidden until then, so there is no flash.
+setTimeout(initAppLayout, 0);
+
 function switchSubTab(subId) {
   document.querySelectorAll('.subtab-btn').forEach(b => b.classList.toggle('active', b.dataset.subtab === subId));
   document.querySelectorAll('.subtab-content').forEach(c => c.classList.toggle('active', c.id === 'sub-' + subId));
@@ -1639,6 +2151,10 @@ let currentNodes = [];
 let soundpadState = { path: null, state: 'stopped', offsetMs: 0, durationMs: 0, startedAt: 0 };
 let soundpadProgressTimer = null;
 let soundpadQueue = [];
+let soundpadShuffle = localStorage.getItem('soundpad-shuffle') === '1';
+// Recently played paths, so shuffle does not hand back the song that just
+// finished - true randomness repeats far more often than people expect.
+let soundpadShuffleHistory = [];
 let crossfadeDuration = 3; // seconds
 let crossfadingOut = null; // the old audio being faded out
 let soundpadSearchText = '';
@@ -3793,6 +4309,7 @@ async function soundpadPlayFile(file) {
   try {
     await audio.play();
     soundpadState = { path: file.path, state: 'playing', offsetMs: 0, durationMs: (audio.duration || 0) * 1000, startedAt: Date.now() };
+    soundpadShuffleHistory = [file.path, ...soundpadShuffleHistory.filter(p => p !== file.path)].slice(0, 50);
     soundpadRender();
     soundpadUpdateNowbar();
     updateTopTransport();
@@ -3835,6 +4352,55 @@ function clearQueue() {
   soundpadRender();
 }
 
+// The songs shuffle draws from: whatever the library view is showing, so a
+// category or search narrows shuffle the same way it narrows the grid.
+function soundpadShufflePool() {
+  const q = soundpadSearchText.trim();
+  return soundpadGetFiles().filter(f => {
+    const inCategory = soundpadActiveCategory === 'All' || (f.category || 'Uncategorized') === soundpadActiveCategory;
+    const matches = !q || `${f.name} ${f.category} ${f.path}`.toLowerCase().includes(q);
+    return inCategory && matches;
+  });
+}
+
+function soundpadPlayRandom() {
+  const pool = soundpadShufflePool();
+  if (!pool.length) {
+    showToast('Nothing to shuffle in this view.', '');
+    return false;
+  }
+  // Exclude recent songs, but never more than would leave nothing to pick:
+  // with a small library that would otherwise stall on the same few tracks.
+  const avoid = Math.min(soundpadShuffleHistory.length, Math.floor(pool.length / 2));
+  const recent = new Set(soundpadShuffleHistory.slice(0, avoid));
+  const fresh = pool.filter(f => !recent.has(f.path) && f.path !== soundpadState.path);
+  const choices = fresh.length ? fresh : pool;
+  const pick = choices[Math.floor(Math.random() * choices.length)];
+  soundpadPlayFile(pick);
+  return true;
+}
+
+function syncShuffleButton() {
+  const btn = document.getElementById('soundpadShuffleBtn');
+  if (btn) btn.classList.toggle('on', soundpadShuffle);
+}
+
+// Turning shuffle on starts a song straight away - a shuffle button that does
+// nothing audible until the current track ends feels broken. Clicking it
+// again while on turns it off.
+function soundpadShuffleClick() {
+  soundpadShuffle = !soundpadShuffle;
+  localStorage.setItem('soundpad-shuffle', soundpadShuffle ? '1' : '0');
+  syncShuffleButton();
+  if (soundpadShuffle) {
+    const idle = !soundpadState.path || soundpadState.state === 'stopped';
+    if (idle) soundpadPlayRandom();
+    else showToast('Shuffle on - a random song plays next.', '');
+  } else {
+    showToast('Shuffle off.', '');
+  }
+}
+
 function renderQueue() {
   const el = document.getElementById('queueList');
   if (!el) return;
@@ -3855,6 +4421,8 @@ function playNextFromQueue() {
     renderQueue();
     soundpadRender();
     soundpadPlayFile(next);
+  } else if (soundpadShuffle && soundpadPlayRandom()) {
+    // An explicit queue always wins; shuffle only fills the silence after it.
   } else {
     soundpadState.state = 'stopped';
     soundpadRender();
@@ -3954,6 +4522,7 @@ function openSoundpadMenu(event, index, file) {
   const items = [
     { icon: playing ? '&#10074;&#10074;' : '&#9654;', label: playing ? 'Pause' : 'Play', run: () => soundpadPlayFile(file) },
     { icon: 'Q', label: inQueue ? 'Queued' : 'Queue', run: () => addToQueue(file) },
+    { icon: '&#8645;', label: soundpadShuffle ? 'Shuffle: on' : 'Shuffle: off', run: () => soundpadShuffleClick() },
     { sep: true },
     { icon: '&#8630;', label: 'Back 10s', run: () => soundpadSeek(-10000), disabled: !active },
     { icon: '&#8631;', label: 'Skip 10s', run: () => soundpadSeek(10000), disabled: !active },
@@ -4039,6 +4608,7 @@ function soundpadRender() {
   const sortEl = document.getElementById('soundpadSort');
   soundpadRenderCategories();
   if (sortEl) sortEl.value = soundpadSortMode;
+  syncShuffleButton();
   const files = soundpadGetFiles();
   const vis = files.map((f, i) => ({f, i})).filter(({f}) => {
     const mc = soundpadActiveCategory === 'All' || (f.category||'Uncategorized') === soundpadActiveCategory;
