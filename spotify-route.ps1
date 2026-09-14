@@ -5,7 +5,7 @@
 #   spotify-route.ps1 -List                 -> JSON list of output devices
 #   spotify-route.ps1 -Device "<id>"        -> route Spotify there
 #   spotify-route.ps1 -Device ""            -> back to the Windows default
-param([switch]$List, [switch]$Get, [string]$Device = $null)
+param([switch]$List, [switch]$Get, [string]$Name = '', [string]$Device = $null)
 
 Add-Type -TypeDefinition @"
 using System;
@@ -83,10 +83,10 @@ namespace CMRoute {
     }
 
     // Which device Windows has saved for each Spotify process ("" = default).
-    public static string GetJson() {
+    public static string GetJson(string processName) {
       var f = Factory();
       var parts = new List<string>();
-      foreach (var p in Process.GetProcessesByName("Spotify")) {
+      foreach (var p in Process.GetProcessesByName(processName)) {
         IntPtr h;
         string dev = "";
         if (f.GetPersistedDefaultAudioEndpoint((uint)p.Id, 0, 1, out h) == 0 && h != IntPtr.Zero) {
@@ -125,5 +125,5 @@ namespace CMRoute {
 "@
 
 if ($List) { [CMRoute.Router]::ListJson(); exit 0 }
-if ($Get) { [CMRoute.Router]::GetJson(); exit 0 }
+if ($Get) { [CMRoute.Router]::GetJson($(if ($Name) { $Name } else { 'Spotify' })); exit 0 }
 if ($null -ne $Device) { $n = [CMRoute.Router]::Route($Device); "routed $n"; exit 0 }
