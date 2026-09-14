@@ -55,6 +55,7 @@ contextBridge.exposeInMainWorld('api', {
   spotifyWebCancel: () => ipcRenderer.invoke('spotify-web:cancel'),
   spotifyWebDisconnect: () => ipcRenderer.invoke('spotify-web:disconnect'),
   spotifyWebOpen: (what) => ipcRenderer.invoke('spotify-web:open', what),
+  spotifyWebPlaylistEmbed: (id) => ipcRenderer.invoke('spotify-web:playlist-embed', id),
   spotifyWebRequest: (method, apiPath, body) => ipcRenderer.invoke('spotify-web:request', method, apiPath, body),
   onSpotifyWebChanged: (cb) => {
     const handler = () => cb();

@@ -3031,7 +3031,15 @@ async function spOpen(target) {
       try {
         tracks = (await spAll('/v1/playlists/' + eid + '/tracks?limit=100', 500)).map(i => i.track);
       } catch (e) {
-        note = e.status === 403 || e.status === 404
+        const emb = (e.status === 403 || e.status === 404) ? await window.api.spotifyWebPlaylistEmbed(id).catch(() => null) : null;
+        if (emb?.tracks?.length) {
+          tracks = emb.tracks;
+          // Fill in album names and art where the API still allows it.
+          for (let i = 0; i < tracks.length; i += 50) {
+            const d = await spApi('GET', '/v1/tracks?ids=' + tracks.slice(i, i + 50).map(t => t.id).join(',')).catch(() => null);
+            (d?.tracks || []).forEach((full, j) => { if (full?.album) tracks[i + j] = { ...tracks[i + j], album: full.album, artists: full.artists || tracks[i + j].artists }; });
+          }
+        } else note = e.status === 403 || e.status === 404
           ? "Spotify doesn't let apps list the songs in this playlist, but you can still play it."
           : 'Could not load the songs: ' + e.message;
       }
@@ -6061,8 +6069,7 @@ function setVisualizerMode(mode) {
 }
 
 function vizStart() {
-  const wrap = document.getElementById('visualizerWrap');
-  if (wrap) wrap.style.display = '';
+  return;  // visualizer removed
   if (vizAnimId) return;
   const canvas = document.getElementById('visualizerCanvas');
   if (!canvas) return;

@@ -1408,6 +1408,25 @@ ipcMain.handle('spotify-web:request', async (_e, method, apiPath, body) => {
   }
 });
 
+// Spotify blocks apps from listing songs in its own/algorithmic playlists.
+// The public embed player still shows them, so read the list from there.
+ipcMain.handle('spotify-web:playlist-embed', async (_e, id) => {
+  if (typeof id !== 'string' || !/^[A-Za-z0-9]{10,40}$/.test(id)) return { error: 'Bad id.' };
+  try {
+    const res = await fetch('https://open.spotify.com/embed/playlist/' + id, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    const html = await res.text();
+    const m = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
+    const list = m && JSON.parse(m[1])?.props?.pageProps?.state?.data?.entity?.trackList;
+    if (!Array.isArray(list)) return { error: 'No track list.' };
+    return { tracks: list.filter(t => /^spotify:track:/.test(t.uri || '')).map(t => ({
+      uri: t.uri, id: t.uri.split(':')[2], name: t.title || '', duration_ms: t.duration || 0,
+      explicit: !!t.isExplicit, artists: String(t.subtitle || '').split(/,\s*/).filter(Boolean).map(name => ({ name })),
+    })) };
+  } catch (e) {
+    return { error: e.message };
+  }
+});
+
 ipcMain.handle('get-open-at-login', () => {
   try { return app.getLoginItemSettings().openAtLogin; } catch { return false; }
 });
