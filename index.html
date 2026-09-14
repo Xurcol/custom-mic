@@ -483,6 +483,42 @@
     .sp-now input[type=range]:hover,.sp-mix input[type=range]:hover{background:linear-gradient(to right,#1ed760 var(--pct,0%),#4d4d4d var(--pct,0%))}
     .sp-now input[type=range]::-webkit-slider-thumb,.sp-mix input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:#fff}
     .sp-now input[type=range]:disabled{opacity:.4;cursor:default}
+    /* ── Now Playing, modern layout ── */
+    .st-view[data-view="sp-now"]{position:relative;isolation:isolate;min-height:100%}
+    .sp-now-bg{position:absolute;inset:0 0 auto 0;height:620px;overflow:hidden;z-index:-1;pointer-events:none;border-radius:8px 8px 0 0}
+    .sp-now-bg img{width:100%;height:100%;object-fit:cover;filter:blur(70px) saturate(1.5) brightness(.55);transform:scale(1.3);opacity:.9;transition:opacity .6s}
+    .sp-now-bg img[hidden]{display:block;opacity:0}
+    .sp-now-bg::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(18,18,18,.15) 0%,rgba(18,18,18,.55) 55%,#121212 100%)}
+    .sp-now{gap:48px;padding:56px 12px 36px;align-items:center}
+    .sp-now-art{width:min(300px,34vw);border-radius:14px;box-shadow:0 30px 80px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.06)}
+    .sp-now-info{max-width:520px}
+    .sp-now-device{display:inline-flex;align-items:center;gap:7px;padding:5px 12px;border-radius:999px;background:rgba(255,255,255,.08);backdrop-filter:blur(12px);color:#e6e6e6;font-size:12px;font-weight:600;letter-spacing:.01em}
+    .sp-now-device:empty{display:none}
+    .sp-now-device::before{content:'';width:7px;height:7px;border-radius:50%;background:#1ed760;box-shadow:0 0 8px #1ed760}
+    .sp-now-info h1{font-size:clamp(30px,3.6vw,52px);font-weight:800;letter-spacing:-.035em;margin:16px 0 6px}
+    .sp-now-sub{font-size:17px;color:rgba(255,255,255,.7);margin-bottom:30px}
+    .sp-now-progress{font-size:11px;color:rgba(255,255,255,.6)}
+    .sp-now-progress span{min-width:34px}
+    .sp-now-progress span:first-child{text-align:left}
+    .sp-now-progress span:last-child{text-align:right}
+    .sp-now input[type=range]{height:5px;border-radius:3px;background:linear-gradient(to right,#fff var(--pct,0%),rgba(255,255,255,.18) var(--pct,0%))}
+    .sp-now input[type=range]:hover{background:linear-gradient(to right,#1ed760 var(--pct,0%),rgba(255,255,255,.18) var(--pct,0%))}
+    .sp-now input[type=range]::-webkit-slider-thumb{width:13px;height:13px;opacity:0;transition:opacity .15s;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+    .sp-now input[type=range]:hover::-webkit-slider-thumb,.sp-now input[type=range]:focus::-webkit-slider-thumb{opacity:1}
+    .sp-now-controls{justify-content:flex-start;gap:20px;margin:22px 0 20px}
+    .sp-now-controls .st-ctl{color:rgba(255,255,255,.75)}
+    .sp-now-controls .st-ctl:hover{color:#fff;transform:scale(1.08)}
+    .sp-now-controls .st-ctl.on{color:#1ed760}
+    .sp-now-controls .st-ctl-play.big{width:60px;height:60px;color:#000;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+    .sp-now-controls .st-ctl-play.big:hover{transform:scale(1.05);color:#000}
+    .sp-now-vol{margin:0;max-width:220px;color:rgba(255,255,255,.7)}
+    .sp-now-vol svg{width:18px;height:18px}
+    #spQueue:not(:empty){background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:18px 10px 10px;margin:8px 0 18px}
+    #spQueue .sp-h2{margin:0 0 10px 14px;font-size:18px;font-weight:700;letter-spacing:-.01em}
+    #spQueue .sp-track.head{display:none}
+    #spQueue .sp-track{border-radius:8px;padding:7px 14px}
+    #spQueue .sp-track:hover{background:rgba(255,255,255,.07)}
+    #spQueue .sp-t-num{color:rgba(255,255,255,.4)}
     /* mixer: Now Playing, Microphone and Settings */
     .sp-mix{margin-top:16px;padding:16px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}
     .sp-mix-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;font-size:14px;font-weight:800;color:var(--header,#fff)}
@@ -820,13 +856,14 @@
       <div id="spDetail" class="sp-page"></div>
     </section>
     <section class="st-view" data-view="sp-now">
+      <div class="sp-now-bg" aria-hidden="true"><img id="spNowBg" alt="" hidden></div>
       <div class="sp-now" id="spNowRoot">
         <div class="sp-now-art">
           <img id="spNowArt" alt="" hidden>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
         </div>
         <div class="sp-now-info">
-          <div class="st-eyebrow" id="spNowDevice"></div>
+          <div class="sp-now-device" id="spNowDevice"></div>
           <h1 id="spNowTitle">Nothing playing</h1>
           <div class="sp-now-sub" id="spNowSub"></div>
           <div class="sp-now-progress">
@@ -3210,6 +3247,11 @@ function spRenderNow() {
     if (live && spotifyCover) { if (art.getAttribute('src') !== spotifyCover) art.setAttribute('src', spotifyCover); art.hidden = false; }
     else art.hidden = true;
   }
+  const bg = document.getElementById('spNowBg');
+  if (bg) {
+    if (live && spotifyCover) { if (bg.getAttribute('src') !== spotifyCover) bg.setAttribute('src', spotifyCover); bg.hidden = false; }
+    else bg.hidden = true;
+  }
   stSetIcon('spNowPlay', live && s.status === 'Playing');
   document.getElementById('spNowShuffle')?.classList.toggle('on', !!s?.shuffle);
   const repeat = document.getElementById('spNowRepeat');
@@ -3261,7 +3303,7 @@ async function spLoadQueue() {
   try {
     const q = await spApi('GET', '/v1/me/player/queue');
     const next = (q?.queue || []).filter(t => t && t.type === 'track').slice(0, 10);
-    el.innerHTML = next.length ? '<h2 class="sp-h2">Next up</h2>' + spTrackList('queue', next) : '';
+    el.innerHTML = next.length ? '<h2 class="sp-h2">Next up</h2>' + spTrackList('queue', next, { showAlbum: false }) : '';
     spMarkPlaying();
   } catch {
     el.innerHTML = '';
