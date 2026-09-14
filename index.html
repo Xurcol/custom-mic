@@ -334,7 +334,7 @@
     html.layout-studio #panelSoundpad .soundpad-search{background:#242424;border:1px solid transparent;border-radius:999px;color:#fff;padding:8px 14px}
     html.layout-studio #panelSoundpad .soundpad-search:focus{border-color:#555}
     html.layout-studio .soundpad-grid{max-height:none;gap:0;overflow:visible;counter-reset:st-track;margin-top:8px}
-    html.layout-studio .soundpad-tile{display:grid;grid-template-columns:36px minmax(0,1fr) 150px 110px 40px;align-items:center;gap:12px;background:none;border:none;border-radius:6px;padding:8px 12px;transition:background .12s;counter-increment:st-track}
+    html.layout-studio .soundpad-tile{display:grid;grid-template-columns:36px minmax(0,1fr) 40px;align-items:center;gap:12px;background:none;border:none;border-radius:6px;padding:8px 12px;transition:background .12s;counter-increment:st-track}
     html.layout-studio .soundpad-tile::before{content:counter(st-track);color:#b3b3b3;font-size:15px;font-variant-numeric:tabular-nums;text-align:center}
     html.layout-studio .soundpad-tile:hover{background:#2a2a2a;transform:none;border:none}
     html.layout-studio .soundpad-tile.active{background:#2a2a2a;box-shadow:none;border:none}
@@ -361,6 +361,9 @@
     /* display:block above would otherwise defeat the hidden attribute. */
     .st-now-art img[hidden]{display:none}
     .soundpad-title-cell{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+    .soundpad-text{display:flex;flex-direction:column;min-width:0;flex:1}
+    .soundpad-artist{font-size:11px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    html.layout-studio .soundpad-artist{font-size:13px;color:#b3b3b3}
     .soundpad-cover{width:26px;height:26px;border-radius:4px;object-fit:cover;flex-shrink:0;background:var(--card)}
     .soundpad-cover.ph{display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--text-muted);border:1px solid var(--card-border)}
     html.layout-studio .soundpad-title-cell{gap:12px}
@@ -1030,6 +1033,7 @@
             <input class="soundpad-search" id="soundpadLinkInput" placeholder="Paste YouTube, Spotify, or SoundCloud link..." onkeydown="if(event.key==='Enter') soundpadAddLink()">
             <button class="soundpad-add" onclick="soundpadAddLink()">+ Add Link</button>
           </div>
+          <button class="soundpad-add" id="soundpadAddSongs" onclick="soundpadAddFile()" style="width:100%;margin-bottom:8px">+ Add Songs</button>
           <div class="soundpad-catbar" id="soundpadCatbar"></div>
           <div class="soundpad-stats" id="soundpadStats">
             <span id="soundpadCount">0 songs</span>
@@ -1045,7 +1049,6 @@
             </span>
           </div>
           <div class="soundpad-grid" id="soundpadGrid"></div>
-          <button class="soundpad-add" onclick="soundpadAddFile()">+ Add Songs</button>
           <div class="soundpad-empty" id="soundpadEmpty">Drag &amp; drop audio files here</div>
         </div>
       </div>
@@ -1839,7 +1842,7 @@ function studioTick() {
     const file = active ? files.find(f => f.path === soundpadState.path) : null;
     stSetText('stNowTitle', file ? file.name : 'Nothing playing');
     stSetText('stNowSub', file
-      ? (soundpadState.state === 'paused' ? 'Paused · ' : '') + (file.category || 'Uncategorized')
+      ? [soundpadState.state === 'paused' ? 'Paused' : '', file.artist || ''].filter(Boolean).join(' · ')
       : (files.length ? 'Pick a song, or press shuffle' : 'Add songs to get started'));
     stSetIcon('stPlay', playing);
     document.getElementById('stShuffle')?.classList.toggle('on', soundpadShuffle);
@@ -2145,6 +2148,7 @@ const coverAttempted = new Set();
 // does not launch dozens of yt-dlp or ffmpeg processes at once. A song with
 // no art to find is marked, so it is not looked up again on every launch.
 async function soundpadEnsureCovers() {
+  soundpadEnsureArtists();
   if (coverQueueRunning || !window.api?.songCover) return;
   coverQueueRunning = true;
   try {
@@ -2166,6 +2170,32 @@ async function soundpadEnsureCovers() {
     }
   } finally {
     coverQueueRunning = false;
+  }
+}
+
+let artistQueueRunning = false;
+const artistAttempted = new Set();
+async function soundpadEnsureArtists() {
+  if (artistQueueRunning || !window.api?.songArtist) return;
+  artistQueueRunning = true;
+  try {
+    for (;;) {
+      const next = soundpadGetFiles().find(f => !f.artist && !f.artistChecked && !artistAttempted.has(f.sourceUrl || f.path));
+      if (!next) break;
+      const id = next.sourceUrl || next.path;
+      artistAttempted.add(id);
+      let artist = '';
+      try { artist = await window.api.songArtist({ path: next.path, sourceUrl: next.sourceUrl || '' }); } catch { break; }  // lookup unavailable: try again next launch
+      const files = soundpadGetFiles();
+      const entry = files.find(f => (f.sourceUrl || f.path) === id);
+      if (!entry) continue;
+      entry.artist = artist || '';
+      entry.artistChecked = true;
+      soundpadSaveFiles(files);
+      if (artist) { soundpadRender(); if (typeof studioSyncPlayer === 'function') studioSyncPlayer(); }
+    }
+  } finally {
+    artistQueueRunning = false;
   }
 }
 
@@ -5613,7 +5643,7 @@ async function soundpadPlayFile(file) {
   const audio = isVideo ? document.createElement('video') : new Audio();
   audio.src = audioSrc;
   audio.crossOrigin = 'anonymous';
-  audio.volume = Math.max(0, Math.min(1, Number(file.volume ?? 100) / 100));
+  audio.volume = 1;
   const source = ctx.createMediaElementSource(audio);
 
   const route = createOutputRoute(ctx);
@@ -5855,7 +5885,7 @@ function openSoundpadMenu(event, index, file) {
     { icon: '&#9632;', label: 'Stop', run: () => soundpadStop(), disabled: !active },
     { sep: true },
     { icon: '&#9000;', label: 'Bind key', hint: file.hotkey || '', run: () => soundpadSetHotkey(index) },
-    { icon: '&#8942;', label: 'Move category', run: () => soundpadMoveFile(index) },
+    { icon: '&#8942;', label: 'Add to category', run: () => soundpadMoveFile(index) },
     { icon: '&#9635;', label: 'Find artwork', run: () => soundpadRefreshCover(index) },
     { sep: true },
     { icon: '&times;', label: 'Remove', danger: true, run: () => {
@@ -5956,26 +5986,8 @@ function soundpadRender() {
     tile.className = 'soundpad-tile' + (soundpadState.path === f.path && soundpadState.state !== 'stopped' ? ' active' : '');
     const playing = soundpadState.path === f.path && soundpadState.state === 'playing';
     const inQueue = soundpadQueue.some(q => q.path === f.path);
-    const cats = soundpadGetCategories();
-    const cur = f.category || 'Uncategorized';
-    const catOpts = [...new Set([cur, ...cats])].map(c => `<option value="${esc(c)}" ${c===cur?'selected':''}>${esc(c)}</option>`).join('');
-    tile.innerHTML = `<span class="soundpad-title-cell">${soundpadCoverHtml(f)}<span class="soundpad-name">${esc(f.name)}</span></span><select class="soundpad-cat-pick" title="Category">${catOpts}<option value="__new">+ New category...</option></select><input class="soundpad-volume" type="range" min="0" max="200" value="${Number(f.volume ?? 100)}" title="Song volume"><span class="soundpad-controls"><button class="soundpad-ctrl" title="Play / pause - right-click the song for more">${playing?'&#10074;&#10074;':'&#9654;'}</button></span>`;
+    tile.innerHTML = `<span class="soundpad-title-cell">${soundpadCoverHtml(f)}<span class="soundpad-text"><span class="soundpad-name">${esc(f.name)}</span>${f.artist ? `<span class="soundpad-artist">${esc(f.artist)}</span>` : ''}</span></span><span class="soundpad-controls"><button class="soundpad-ctrl" title="Play / pause - right-click the song for more">${playing?'&#10074;&#10074;':'&#9654;'}</button></span>`;
     tile.onclick = () => soundpadPlayFile(f);
-    const vol = tile.querySelector('.soundpad-volume');
-    vol.oninput = e => { e.stopPropagation(); soundpadSetFileVolume(i, e.target.value); };
-    vol.onclick = e => e.stopPropagation();
-    const catPick = tile.querySelector('.soundpad-cat-pick');
-    catPick.onclick = e => e.stopPropagation();
-    catPick.onchange = async e => {
-      e.stopPropagation();
-      if (e.target.value === '__new') {
-        const name = await askPrompt('New category for "' + f.name + '":', '');
-        if (!name?.trim()) { soundpadRender(); return; }
-        soundpadAssignCategory(i, name);
-        return;
-      }
-      soundpadAssignCategory(i, e.target.value);
-    };
     const btns = tile.querySelectorAll('.soundpad-ctrl');
     btns[0].onclick = e => { e.stopPropagation(); soundpadPlayFile(f); };
     tile.oncontextmenu = e => openSoundpadMenu(e, i, f);

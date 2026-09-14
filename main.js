@@ -170,6 +170,7 @@ async function resolveOnlineAudioSource(source) {
     durationMs: Number.isFinite(Number(info.duration)) ? Math.round(Number(info.duration) * 1000) : 0,
     webpageUrl,
     thumbnail: pickThumbnail(info),
+    artist: info.artist || info.creator || info.uploader || '',
     cachedAt: Date.now(),
   };
   onlineAudioCache.set(original, resolved);
@@ -1010,6 +1011,31 @@ async function resolveSongCover({ path: filePath, sourceUrl } = {}) {
   }
   return '';
 }
+
+// Artist from the file's tags (ffmpeg prints them), or from the link's metadata.
+async function resolveSongArtist({ path: filePath, sourceUrl } = {}) {
+  if (sourceUrl && isHttpUrl(sourceUrl)) {
+    const cached = onlineAudioCache.get(String(sourceUrl).trim());
+    if (cached?.artist) return cached.artist;
+    if (/open\.spotify\.com|spotify\.link/i.test(sourceUrl)) return '';
+    try {
+      const raw = await runYtDlp(sourceUrl, { dumpSingleJson: true, skipDownload: true, noPlaylist: true, noWarnings: true, ignoreErrors: true });
+      const info = Array.isArray(raw?.entries) ? raw.entries[0] : raw;
+      return String(info?.artist || info?.creator || info?.uploader || '');
+    } catch { return ''; }
+  }
+  if (typeof filePath !== 'string' || !filePath || isHttpUrl(filePath)) return '';
+  const ffmpeg = findFfmpeg();
+  if (!ffmpeg) return '';
+  return new Promise(resolve => {
+    execFile(ffmpeg, ['-hide_banner', '-i', filePath], { windowsHide: true, timeout: 15000 }, (_err, _out, stderr) => {
+      const m = String(stderr || '').match(/^\s*(?:artist|album_artist|ARTIST)\s*:\s*(.+)$/im);
+      resolve(m ? m[1].trim() : '');
+    });
+  });
+}
+
+ipcMain.handle('song-artist', (_e, song) => resolveSongArtist(song || {}).catch(() => ''));
 
 ipcMain.handle('song-cover', (_e, song) => {
   const id = JSON.stringify([song?.path || '', song?.sourceUrl || '']);
