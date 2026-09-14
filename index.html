@@ -874,10 +874,6 @@
 
 <div class="titlebar">
   <span class="titlebar-title">Custom Mic</span>
-  <button class="screenshare-toggle" id="screenshareHideToggle" onclick="toggleScreenshareHide()" title="Best effort: hides this app from Discord/Windows screen capture">
-    <span class="screenshare-dot"></span>
-    Hide on screenshare
-  </button>
   <div class="titlebar-controls">
     <button class="titlebar-btn" onclick="windowControls.minimize()">&#x2500;</button>
     <button class="titlebar-btn" onclick="windowControls.maximize()">&#x25A1;</button>
@@ -1321,6 +1317,11 @@
           <button class="eq-fx-toggle" id="openOnLaunchToggle" onclick="toggleOpenOnLaunch()" title="Start Custom Mic when you sign in to Windows"></button>
         </div>
         <div style="font-size:10px;color:var(--text-muted);margin-top:4px">Starts Custom Mic automatically when you sign in to Windows.</div>
+        <div class="monitor-row" style="margin-top:10px">
+          <label for="screenshareHideToggle">Hide on screenshare</label>
+          <button class="eq-fx-toggle" id="screenshareHideToggle" onclick="toggleScreenshareHide()" title="Best effort: hides this app from Discord/Windows screen capture"></button>
+        </div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:4px">Best effort: blanks this app in Discord and Windows screen captures.</div>
       </div>
 
       <div class="mic-section" style="margin-top:12px">
