@@ -105,4 +105,10 @@ contextBridge.exposeInMainWorld('windowControls', {
   minimize: () => ipcRenderer.send('window-minimize'),
   maximize: () => ipcRenderer.send('window-maximize'),
   close: () => ipcRenderer.send('window-close'),
+  fullscreen: (on) => ipcRenderer.send('window-fullscreen', on),
+  onFullscreen: (cb) => {
+    const handler = (_e, on) => cb(!!on);
+    ipcRenderer.on('window:fullscreen', handler);
+    return () => ipcRenderer.removeListener('window:fullscreen', handler);
+  },
 });

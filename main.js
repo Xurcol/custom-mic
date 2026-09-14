@@ -612,6 +612,23 @@ function createWindow() {
   }
   mainWindow.loadFile('index.html');
   mainWindow.on('closed', () => { mainWindow = null; });
+  // Report the settled state rather than the raw event: leaving full screen
+  // from a maximized frameless window can fire a stray enter on Windows.
+  let fullscreenReport = null;
+  const reportFullscreen = () => {
+    clearTimeout(fullscreenReport);
+    fullscreenReport = setTimeout(() => {
+      if (!mainWindow || mainWindow.isDestroyed()) return;
+      const full = mainWindow.isFullScreen();
+      mainWindow.webContents.send('window:fullscreen', full);
+      if (!full && restoreMaximizeAfterFullscreen) {
+        restoreMaximizeAfterFullscreen = false;
+        mainWindow.maximize();
+      }
+    }, 150);
+  };
+  mainWindow.on('enter-full-screen', reportFullscreen);
+  mainWindow.on('leave-full-screen', reportFullscreen);
 }
 
 app.whenReady().then(createWindow);
@@ -631,6 +648,20 @@ ipcMain.on('window-maximize', () => {
   else mainWindow?.maximize();
 });
 ipcMain.on('window-close', () => mainWindow?.close());
+// A maximized frameless window bounces back into full screen after leaving it
+// on Windows, so it is un-maximized first and re-maximized once it has left.
+let restoreMaximizeAfterFullscreen = false;
+ipcMain.on('window-fullscreen', (_e, on) => {
+  if (!mainWindow) return;
+  const want = on === undefined || on === null ? !mainWindow.isFullScreen() : !!on;
+  if (want === mainWindow.isFullScreen()) return;
+  if (want && mainWindow.isMaximized()) {
+    restoreMaximizeAfterFullscreen = true;
+    mainWindow.unmaximize();
+  }
+  if (want) { if (mainWindow.isMinimized()) mainWindow.restore(); mainWindow.focus(); }
+  mainWindow.setFullScreen(want);
+});
 
 ipcMain.handle('set-content-protection', async (_e, enabled) => {
   const on = !!enabled;

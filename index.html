@@ -304,6 +304,74 @@
     .st-lyrics.plain .st-lyrics-line{--d:0;color:rgba(255,255,255,.88);filter:none;opacity:1;transform:none;cursor:default;font-size:clamp(22px,2.4vw,32px)}
     .st-lyrics-msg{color:rgba(255,255,255,.72);font-size:20px;font-weight:600;padding:20px 0;margin-top:-18vh}
     .st-lyrics-src{color:rgba(255,255,255,.35);font-size:11px;margin-top:40px}
+    .ly-full{margin-left:auto;width:40px;height:40px;border-radius:50%;border:none;background:rgba(255,255,255,.08);color:rgba(255,255,255,.8);display:grid;place-items:center;cursor:pointer;transition:background .15s,transform .15s}
+    .ly-full:hover{background:rgba(255,255,255,.16);color:#fff;transform:scale(1.06)}
+    .ly-full svg{width:18px;height:18px}
+    /* ── Full screen player ── */
+    .fs-view{position:fixed;inset:0;z-index:2147483000;background:#040404;color:#fff;overflow:hidden;font-family:inherit;animation:fs-in .6s cubic-bezier(.22,1,.36,1)}
+    @keyframes fs-in{from{opacity:0}to{opacity:1}}
+    .fs-view.idle{cursor:none}
+    .fs-bg{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+    .fs-bg img{position:absolute;object-fit:cover;filter:blur(120px) saturate(2);transition:opacity 1.4s ease}
+    .fs-bg img:not([src]){opacity:0!important}
+    #fsBg1{width:150%;height:150%;left:-25%;top:-25%;opacity:.8;animation:fs-drift-1 48s ease-in-out infinite alternate}
+    #fsBg2{width:90%;height:120%;left:-15%;top:-10%;opacity:.55;mix-blend-mode:screen;transform:scaleX(-1);animation:fs-drift-2 36s ease-in-out infinite alternate}
+    #fsBg3{width:80%;height:110%;right:-20%;top:5%;opacity:.45;mix-blend-mode:screen;transform:scaleY(-1);animation:fs-drift-3 60s ease-in-out infinite alternate}
+    @keyframes fs-drift-1{0%{transform:translate(-3%,-2%) rotate(0deg) scale(1)}100%{transform:translate(4%,3%) rotate(20deg) scale(1.15)}}
+    @keyframes fs-drift-2{0%{transform:scaleX(-1) translate(0,0) rotate(0deg)}100%{transform:scaleX(-1) translate(-12%,8%) rotate(-30deg) scale(1.2)}}
+    @keyframes fs-drift-3{0%{transform:scaleY(-1) translate(0,0) rotate(0deg)}100%{transform:scaleY(-1) translate(10%,-10%) rotate(35deg) scale(1.1)}}
+    .fs-bg::after{content:'';position:absolute;inset:0;background:radial-gradient(70% 90% at 28% 50%,rgba(0,0,0,.05) 0%,rgba(0,0,0,.35) 60%,rgba(0,0,0,.72) 100%),linear-gradient(180deg,rgba(0,0,0,.35) 0%,rgba(0,0,0,0) 22%,rgba(0,0,0,0) 78%,rgba(0,0,0,.45) 100%)}
+    .fs-grain{position:absolute;inset:0;pointer-events:none;opacity:.07;mix-blend-mode:overlay;background-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+    .fs-top{position:absolute;top:26px;left:34px;z-index:3;display:flex;align-items:center;gap:10px;font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.62);transition:opacity .5s}
+    .fs-top-dot{width:8px;height:8px;border-radius:50%;background:#1ed760;box-shadow:0 0 10px #1ed760}
+    .fs-view.paused .fs-top-dot{background:rgba(255,255,255,.5);box-shadow:none}
+    .fs-exit{position:absolute;top:18px;right:24px;z-index:3;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.08);backdrop-filter:blur(16px);color:#fff;display:grid;place-items:center;cursor:pointer;transition:opacity .5s,background .15s,transform .15s}
+    .fs-exit:hover{background:rgba(255,255,255,.18);transform:scale(1.06)}
+    .fs-exit svg{width:19px;height:19px}
+    .fs-view.idle .fs-exit,.fs-view.idle .fs-top{opacity:0}
+    .fs-grid{position:relative;z-index:1;height:100%;display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);grid-template-rows:minmax(0,1fr);column-gap:5.5vw;align-items:center;padding:0 5vw 0 6vw}
+    .fs-left{align-self:center;justify-self:end;width:100%;max-width:min(470px,calc(100vh - 370px));min-width:240px;display:flex;flex-direction:column}
+    .fs-cover-wrap{position:relative;width:100%;aspect-ratio:1}
+    .fs-glow{position:absolute;inset:8% 6% -4% 6%;width:88%;height:96%;object-fit:cover;border-radius:24px;filter:blur(46px) saturate(1.7) brightness(1.05);opacity:.7;transform:translateY(6%);transition:opacity 1s,transform .8s cubic-bezier(.22,1,.36,1)}
+    .fs-glow:not([src]){opacity:0}
+    .fs-cover{position:relative;width:100%;height:100%;border-radius:14px;overflow:hidden;background:rgba(255,255,255,.07);color:rgba(255,255,255,.35);display:grid;place-items:center;box-shadow:0 30px 80px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.09) inset;transition:transform .8s cubic-bezier(.22,1,.36,1)}
+    .fs-cover img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+    .fs-cover img[hidden]{display:none}
+    .fs-cover svg{width:34%;height:34%}
+    .fs-view:not([hidden]) .fs-cover-wrap{animation:fs-cover-in .9s cubic-bezier(.22,1,.36,1) both}
+    @keyframes fs-cover-in{from{opacity:0;transform:scale(.88) translateY(18px)}to{opacity:1;transform:none}}
+    .fs-view.paused .fs-cover{transform:scale(.9)}
+    .fs-view.paused .fs-glow{opacity:.35;transform:translateY(2%) scale(.9)}
+    .fs-meta{margin-top:34px;min-width:0}
+    .fs-title{font-size:clamp(24px,2.4vw,40px);font-weight:800;letter-spacing:-.035em;line-height:1.1;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+    .fs-artist{font-size:clamp(15px,1.3vw,22px);font-weight:600;color:rgba(255,255,255,.78);margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .fs-album{font-size:clamp(12px,.9vw,14px);color:rgba(255,255,255,.45);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .fs-album:empty{display:none}
+    .fs-progress{margin-top:26px}
+    .fs-bar{position:relative;height:5px;border-radius:3px;background:rgba(255,255,255,.18);cursor:pointer;transition:height .15s,transform .15s}
+    .fs-bar::before{content:'';position:absolute;left:0;right:0;top:-10px;bottom:-10px}
+    .fs-bar:hover{height:8px}
+    .fs-bar-fill{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,rgba(255,255,255,.85),#fff);border-radius:3px;box-shadow:0 0 14px rgba(255,255,255,.35)}
+    .fs-times{display:flex;justify-content:space-between;margin-top:9px;font-size:12px;font-weight:600;color:rgba(255,255,255,.55);font-variant-numeric:tabular-nums}
+    .fs-controls{display:flex;align-items:center;justify-content:space-between;margin-top:18px}
+    .fs-ctl{width:48px;height:48px;border:none;background:none;color:rgba(255,255,255,.8);display:grid;place-items:center;border-radius:50%;cursor:pointer;transition:transform .18s cubic-bezier(.22,1,.36,1),color .15s,background .15s}
+    .fs-ctl svg{width:24px;height:24px}
+    .fs-ctl:hover{color:#fff;background:rgba(255,255,255,.08);transform:scale(1.08)}
+    .fs-ctl:active{transform:scale(.94)}
+    .fs-ctl.on{color:#1ed760}
+    .fs-ctl.fs-play{width:76px;height:76px;background:#fff;color:#000;box-shadow:0 14px 40px rgba(0,0,0,.35),0 0 0 8px rgba(255,255,255,.06)}
+    .fs-ctl.fs-play svg{width:30px;height:30px}
+    .fs-ctl.fs-play:hover{background:#fff;color:#000;transform:scale(1.06);box-shadow:0 14px 40px rgba(0,0,0,.35),0 0 0 12px rgba(255,255,255,.08)}
+    .fs-right{position:relative;align-self:stretch;height:100%;min-width:0;min-height:0;overflow:hidden}
+    .fs-view:not([hidden]) .fs-right{animation:fs-lyrics-in 1s .1s cubic-bezier(.22,1,.36,1) both}
+    @keyframes fs-lyrics-in{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:none}}
+    .fs-right .st-lyrics{height:100%;padding:44vh 2vw 56vh 0;-webkit-mask-image:linear-gradient(180deg,transparent 0%,#000 26%,#000 70%,transparent 100%);mask-image:linear-gradient(180deg,transparent 0%,#000 26%,#000 70%,transparent 100%)}
+    .fs-right .st-lyrics-line{max-width:none;font-size:clamp(30px,3.3vw,60px);line-height:1.18;margin-bottom:34px;letter-spacing:-.03em}
+    .fs-right .st-lyrics-line.now .ly-w.lit{text-shadow:0 0 22px rgba(255,255,255,.6),0 0 50px rgba(255,255,255,.25)}
+    .fs-right .st-lyrics-msg{margin-top:0}
+    .fs-view.no-lyrics .fs-grid{grid-template-columns:minmax(0,1fr) 0fr;column-gap:0;padding:0 6vw}
+    .fs-view.no-lyrics .fs-left{justify-self:center;max-width:min(540px,calc(100vh - 380px));text-align:center}
+    .fs-view.no-lyrics .fs-right{visibility:hidden}
     .st-view.active{display:block;animation:st-view-in .28s cubic-bezier(.22,1,.36,1)}
     @keyframes st-view-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
     .st-title{font-size:32px;font-weight:800;letter-spacing:-.02em;padding:28px 0 18px;color:#fff}
@@ -921,6 +989,7 @@
       <div class="ly-head">
         <div class="ly-cover"><img id="lyCover" alt="" hidden></div>
         <div class="ly-head-text"><div class="ly-eyebrow">Lyrics</div><div class="ly-head-title" id="lyTitle"></div><div class="ly-head-artist" id="lyArtist"></div></div>
+        <button class="ly-full" onclick="fsEnter()" title="Full screen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
       </div>
       <div class="st-lyrics" id="stLyrics"><div class="st-lyrics-msg">Play a song to see its lyrics.</div></div>
     </section>
@@ -950,12 +1019,48 @@
       </div>
     </div>
     <div class="st-right">
+      <button class="st-ctl" id="stFullBtn" onclick="fsEnter()" title="Full screen player"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
       <button class="st-ctl" id="stLyricsBtn" onclick="studioToggleLyrics()" title="Lyrics"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h10M4 18h7"/><circle cx="18" cy="17" r="2.5"/><path d="M20.5 17V9"/></svg></button>
       <button class="st-mic" id="stMicBtn" onclick="toggleMic()" title="Start or stop the microphone"><span class="st-mic-dot"></span><span id="stMicLabel">Mic off</span></button>
       <div class="st-meter"><div id="stMicMeter"></div></div>
       <div class="st-vol"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg><input type="range" id="stVolume" min="0" max="200" value="100" oninput="studioSetVolume(this.value)" title="Music volume"></div>
     </div>
   </footer>
+</div>
+
+<div class="fs-view" id="fsView" hidden>
+  <div class="fs-bg" aria-hidden="true"><img id="fsBg1" alt=""><img id="fsBg2" alt=""><img id="fsBg3" alt=""></div>
+  <div class="fs-grain" aria-hidden="true"></div>
+  <div class="fs-top">
+    <span class="fs-top-dot"></span>
+    <span id="fsSource">Now playing</span>
+  </div>
+  <button class="fs-exit" onclick="fsClose(true)" title="Exit full screen (Esc)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg></button>
+  <div class="fs-grid">
+    <div class="fs-left">
+      <div class="fs-cover-wrap">
+        <img class="fs-glow" id="fsGlow" alt="" aria-hidden="true">
+        <div class="fs-cover"><img id="fsCover" alt="" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+      </div>
+      <div class="fs-meta">
+        <div class="fs-title" id="fsTitle"></div>
+        <div class="fs-artist" id="fsArtist"></div>
+        <div class="fs-album" id="fsAlbum"></div>
+      </div>
+      <div class="fs-progress">
+        <div class="fs-bar" id="fsBar"><div class="fs-bar-fill" id="fsBarFill"></div></div>
+        <div class="fs-times"><span id="fsPos">0:00</span><span id="fsDur">0:00</span></div>
+      </div>
+      <div class="fs-controls">
+        <button class="fs-ctl" id="fsShuffle" onclick="studioShuffle()" title="Shuffle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="m4 4 5 5"/></svg></button>
+        <button class="fs-ctl" onclick="studioPrev()" title="Previous"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 5.5v13a1 1 0 0 1-1.55.83L9 13.5V18a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v4.5l8.45-5.83A1 1 0 0 1 19 5.5z"/></svg></button>
+        <button class="fs-ctl fs-play" id="fsPlay" onclick="studioPlayerPlay()" title="Play"></button>
+        <button class="fs-ctl" onclick="studioNext()" title="Next"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 5.5v13a1 1 0 0 0 1.55.83L15 13.5V18a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-1a1 1 0 0 0-1 1v4.5L6.55 4.67A1 1 0 0 0 5 5.5z"/></svg></button>
+        <button class="fs-ctl" id="fsLyricsToggle" onclick="fsToggleLyricsPanel()" title="Show or hide lyrics"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h10M4 18h7"/><circle cx="18" cy="17" r="2.5"/><path d="M20.5 17V9"/></svg></button>
+      </div>
+    </div>
+    <div class="fs-right" id="fsLyricsSlot"></div>
+  </div>
 </div>
 
 <div class="titlebar">
@@ -2116,6 +2221,154 @@ function soundpadCoverSrc(f) {
   return /^https?:/i.test(f.cover) ? f.cover : coverUrl(f.cover);
 }
 
+// ── Full screen player ──
+// Going full screen with a song that has lyrics opens this page: large cover,
+// title, controls and the lyrics beside them. The lyrics element itself is
+// moved in here, so the same word-by-word renderer drives both views.
+const fsState = { open: false, raf: 0, lastLyricsTick: 0, hideLyrics: false, home: null, idleTimer: 0, checkSeq: 0, windowFull: false, lastKey: '' };
+function lyricsVisible() { return studioView === 'lyrics' || fsState.open; }
+
+function fsEnter() {
+  fsState.enteringUntil = Date.now() + 5000;
+  window.windowControls?.fullscreen?.(true);
+  fsOpen();
+}
+
+async function fsMaybeOpen() {
+  if (fsState.open || Date.now() < (fsState.suppressUntil || 0)) return;
+  const t = studioCurrentTrack();
+  if (!t || !t.title) return;
+  fsState.lastKey = t.title + '|' + t.artist;
+  const seq = ++fsState.checkSeq;
+  let r = null;
+  try { r = await window.api.lyricsGet({ title: t.title, artist: t.artist, durationMs: t.durationMs }); } catch {}
+  if (seq !== fsState.checkSeq || fsState.open || !fsState.windowFull) return;
+  if (r && (r.synced || r.plain)) fsOpen();
+}
+
+function fsOpen() {
+  const view = document.getElementById('fsView');
+  const box = document.getElementById('stLyrics');
+  const slot = document.getElementById('fsLyricsSlot');
+  if (!view || !box || !slot) return;
+  if (!fsState.open) {
+    fsState.home = { parent: box.parentNode, next: box.nextSibling };
+    slot.appendChild(box);
+  }
+  fsState.open = true;
+  view.hidden = false;
+  lyricsState.nowIdx = -2;
+  lyricsState.scrolledOnce = false;
+  studioLyricsTick(true);
+  fsBump();
+  if (!fsState.raf) fsState.raf = requestAnimationFrame(fsTick);
+}
+
+function fsClose(exitWindow) {
+  const view = document.getElementById('fsView');
+  const box = document.getElementById('stLyrics');
+  if (fsState.open && box && fsState.home?.parent) fsState.home.parent.insertBefore(box, fsState.home.next);
+  fsState.open = false;
+  if (view) view.hidden = true;
+  cancelAnimationFrame(fsState.raf);
+  fsState.raf = 0;
+  lyricsState.nowIdx = -2;
+  lyricsState.scrolledOnce = false;
+  if (exitWindow) {
+    fsState.suppressUntil = Date.now() + 4000;  // don't pop straight back open while the window settles
+    window.windowControls?.fullscreen?.(false);
+  }
+  studioLyricsTick();
+}
+
+function fsToggleLyricsPanel() {
+  fsState.hideLyrics = !fsState.hideLyrics;
+  fsBump();
+}
+
+// The exit button and cursor hide after a few still seconds.
+function fsBump() {
+  const view = document.getElementById('fsView');
+  if (!view) return;
+  view.classList.remove('idle');
+  clearTimeout(fsState.idleTimer);
+  fsState.idleTimer = setTimeout(() => view.classList.add('idle'), 2800);
+}
+
+function fsTick(now) {
+  fsState.raf = 0;
+  if (!fsState.open) return;
+  const view = document.getElementById('fsView');
+  const t = studioCurrentTrack();
+  const spotify = studioSource() === 'spotify';
+  const set = (id, v) => { const e = document.getElementById(id); if (e && e.textContent !== v) e.textContent = v; };
+  set('fsTitle', t ? t.title : 'Nothing playing');
+  set('fsArtist', spotify ? (spotifyState?.artist || '') : (soundpadCurrentFile()?.artist || t?.artist || ''));
+  const cover = t?.cover || '';
+  ['fsBg1', 'fsBg2', 'fsBg3'].forEach(id => {
+    const img = document.getElementById(id);
+    if (!img) return;
+    if (cover) { if (img.getAttribute('src') !== cover) img.setAttribute('src', cover); }
+    else img.removeAttribute('src');
+  });
+  const glow = document.getElementById('fsGlow');
+  if (glow) { if (cover) { if (glow.getAttribute('src') !== cover) glow.setAttribute('src', cover); } else glow.removeAttribute('src'); }
+  const cat = !spotify && catalogShowing() ? catalogTrack() : null;
+  set('fsAlbum', spotify ? (spotifyState?.album || '') : (cat?.album?.name || ''));
+  set('fsSource', spotify ? 'Playing on Spotify' : cat ? 'Spotify · in Custom Mic' : 'Custom Mic');
+  const art = document.getElementById('fsCover');
+  if (art) {
+    if (cover) { if (art.getAttribute('src') !== cover) art.setAttribute('src', cover); art.hidden = false; }
+    else art.hidden = true;
+  }
+  const dur = t?.durationMs || 0;
+  const pos = Math.min(t?.position || 0, dur || Infinity);
+  const fill = document.getElementById('fsBarFill');
+  if (fill) fill.style.width = (dur ? (pos / dur) * 100 : 0).toFixed(2) + '%';
+  set('fsPos', soundpadFmt(pos));
+  set('fsDur', soundpadFmt(dur));
+  const playing = spotify ? spotifyState?.status === 'Playing' : (soundpadState.state === 'playing' && !catalog.loading);
+  stSetIcon('fsPlay', playing);
+  view.classList.toggle('paused', !!t && !playing);
+  const shuffle = spotify ? !!spotifyState?.shuffle : (catalogShowing() ? catalog.shuffle : soundpadShuffle);
+  document.getElementById('fsShuffle')?.classList.toggle('on', shuffle);
+  document.getElementById('fsLyricsToggle')?.classList.toggle('on', !fsState.hideLyrics);
+  view.classList.toggle('no-lyrics', fsState.hideLyrics || !t || (!lyricsState.loading && !lyricsState.hasLyrics && !!lyricsState.key));
+  if (!now || now - fsState.lastLyricsTick > 200) {
+    fsState.lastLyricsTick = now || 0;
+    studioLyricsTick();
+  }
+  fsState.raf = requestAnimationFrame(fsTick);
+}
+
+setTimeout(() => {
+  window.windowControls?.onFullscreen?.(on => {
+    fsState.windowFull = on;
+    if (on) { fsState.enteringUntil = 0; fsMaybeOpen(); }
+    else if (fsState.open && Date.now() > (fsState.enteringUntil || 0)) fsClose(false);
+  });
+  const bar = document.getElementById('fsBar');
+  if (bar) bar.addEventListener('click', e => {
+    const r = bar.getBoundingClientRect();
+    studioSeekCommit(Math.round(Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * 1000));
+  });
+  document.getElementById('fsView')?.addEventListener('mousemove', fsBump);
+  // While full screen, a new song with lyrics opens the page on its own.
+  setInterval(() => {
+    if (!fsState.windowFull || fsState.open) return;
+    const t = studioCurrentTrack();
+    const key = t ? t.title + '|' + t.artist : '';
+    if (key && key !== fsState.lastKey) fsMaybeOpen();
+  }, 1500);
+}, 0);
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'F11') { e.preventDefault(); window.windowControls?.fullscreen?.(); return; }
+  if (!fsState.open) return;
+  if (e.key === 'Escape') { e.preventDefault(); fsClose(true); return; }
+  if (e.key === ' ' && !/input|textarea|select/i.test(document.activeElement?.tagName || '')) { e.preventDefault(); studioPlayerPlay(); }
+});
+
 function studioToggleLyrics() {
   if (studioView === 'lyrics') setStudioView(lyricsState.back || 'soundpad');
   else { lyricsState.back = studioView; setStudioView('lyrics'); studioLyricsTick(true); }
@@ -2163,7 +2416,7 @@ function lyricsParse(synced, durationMs) {
 
 async function studioLyricsTick(force) {
   document.getElementById('stLyricsBtn')?.classList.toggle('on', studioView === 'lyrics');
-  if (studioView !== 'lyrics') { if (lyricsState.raf) { cancelAnimationFrame(lyricsState.raf); lyricsState.raf = 0; } return; }
+  if (!lyricsVisible()) { if (lyricsState.raf) { cancelAnimationFrame(lyricsState.raf); lyricsState.raf = 0; } return; }
   const el = document.getElementById('stLyrics');
   if (!el) return;
   const t = studioCurrentTrack();
@@ -2178,7 +2431,7 @@ async function studioLyricsTick(force) {
 
   const key = t ? t.title + '|' + t.artist : '';
   if (key !== lyricsState.key || (force === true && !lyricsState.lines.length && !lyricsState.loading)) {
-    lyricsState = { ...lyricsState, key, lines: [], synced: false, nowIdx: -2, loading: !!t, scrolledOnce: false, lineEls: null, wordEls: null };
+    lyricsState = { ...lyricsState, key, lines: [], synced: false, nowIdx: -2, loading: !!t, scrolledOnce: false, lineEls: null, wordEls: null, hasLyrics: false };
     el.className = 'st-lyrics';
     if (!t) { el.innerHTML = '<div class="st-lyrics-msg">Play a song to see its lyrics.</div>'; return; }
     el.innerHTML = '<div class="st-lyrics-msg">Loading lyrics…</div>';
@@ -2193,6 +2446,7 @@ async function studioLyricsTick(force) {
     }
     if (r.synced) {
       lyricsState.synced = true;
+      lyricsState.hasLyrics = true;
       lyricsState.lines = lyricsParse(r.synced, t.durationMs);
       el.innerHTML = lyricsState.lines.map((l, i) => l.words.length
         ? '<div class="st-lyrics-line" data-i="' + i + '">' + l.words.map(w => '<span class="ly-w">' + esc(w.text) + '</span>').join('') + '</div>'
@@ -2217,6 +2471,7 @@ async function studioLyricsTick(force) {
         if (l && cur?.durationMs) studioSeekCommit(Math.round((l.at / cur.durationMs) * 1000));
       });
     } else {
+      lyricsState.hasLyrics = true;
       el.className = 'st-lyrics plain';
       el.innerHTML = r.plain.split(/\r?\n/).map(text => '<div class="st-lyrics-line">' + (esc(text) || '&nbsp;') + '</div>').join('') +
         '<div class="st-lyrics-src">Lyrics from LRCLIB</div>';
@@ -2229,7 +2484,7 @@ async function studioLyricsTick(force) {
 // then fills each of its words smoothly from left to right.
 function lyricsFrame() {
   lyricsState.raf = 0;
-  if (studioView !== 'lyrics' || !lyricsState.synced || !lyricsState.lineEls) return;
+  if (!lyricsVisible() || !lyricsState.synced || !lyricsState.lineEls) return;
   const t = studioCurrentTrack();
   if (t) {
     const pos = t.position + 120;
