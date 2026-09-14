@@ -267,12 +267,12 @@
     .st-lib-sep{height:1px;background:#282828;margin:8px 12px}
     .st-main{overflow-y:auto;min-width:0;position:relative;scrollbar-width:thin;scrollbar-color:#3a3a3a transparent}
     .st-view{display:none;padding:0 24px 40px}
-    .st-view[data-view="lyrics"]{position:relative;isolation:isolate;min-height:100%;padding:0 48px}
+    .st-view[data-view="lyrics"]{position:relative;isolation:isolate;min-height:100%;padding:0 48px;overflow-x:clip}
     .ly-bg{position:sticky;top:0;height:0;z-index:-1;pointer-events:none}
     .ly-bg img{position:absolute;left:-60px;right:-60px;top:0;width:calc(100% + 120px);height:calc(100vh - 150px);object-fit:cover;filter:blur(90px) saturate(1.6) brightness(.45);transform:scale(1.4);transition:opacity .8s}
     .ly-bg img[hidden]{display:block;opacity:0}
     .ly-bg::after{content:'';position:absolute;left:-60px;right:-60px;top:0;height:calc(100vh - 150px);background:radial-gradient(120% 90% at 30% 20%,transparent 0%,rgba(18,18,18,.55) 70%,rgba(18,18,18,.85) 100%)}
-    .ly-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:14px;padding:26px 0 18px;background:linear-gradient(180deg,rgba(18,18,18,.55),transparent);backdrop-filter:blur(2px)}
+    .ly-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:14px;padding:22px 48px 28px;margin:0 -48px;background:linear-gradient(180deg,rgba(14,14,14,.92) 0%,rgba(14,14,14,.75) 60%,rgba(14,14,14,0) 100%);-webkit-mask-image:linear-gradient(180deg,#000 75%,transparent)}
     .ly-head img{width:52px;height:52px;border-radius:8px;object-fit:cover;box-shadow:0 8px 24px rgba(0,0,0,.45)}
     .ly-head img[hidden]{display:none}
     .ly-head-title{font-size:17px;font-weight:700;color:#fff;letter-spacing:-.01em}
