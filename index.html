@@ -2613,6 +2613,7 @@ window.addEventListener('message', event => {
 
 function initSpotifyToMic() {
   window.api?.onSpotifyAudioStatus?.(s => {
+    if (s.state === 'route') { if (s.error) showToast(s.error, ''); return; }
     const previous = spotifyAudioStatus;
     spotifyAudioStatus = { ...(previous || {}), ...s };
     if (s.state === 'error' && s.error && (!previous || previous.error !== s.error)) {

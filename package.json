@@ -43,6 +43,7 @@
       "native/build/Release/virtual_cam.dll",
       "node_modules/**/*",
       "spotify-bridge.ps1",
+      "spotify-route.ps1",
       "native/build/Release/spotify_capture.node"
     ],
     "asar": true,
@@ -52,6 +53,7 @@
       "native/build/Release/vcam_sender.node",
       "native/build/Release/virtual_cam.dll",
       "spotify-bridge.ps1",
+      "spotify-route.ps1",
       "native/build/Release/spotify_capture.node"
     ]
   },

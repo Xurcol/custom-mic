@@ -1143,12 +1143,67 @@ function beginSpotifyCapture() {
   return true;
 }
 
+// While Spotify goes into the mic, its own sound is moved to a silent output
+// device so the real Spotify is not heard on top of Custom Mic. Capture is
+// per-process, so it keeps working whatever device Spotify plays to. When the
+// feature is off, Spotify goes back to the normal Windows default.
+const SPOTIFY_ROUTE_MARKER = () => path.join(app.getPath('userData'), 'spotify-routed.flag');
+let spotifyRoutedPids = '';
+
+function spotifyRoutePath() {
+  let p = path.join(__dirname, 'spotify-route.ps1');
+  if (p.includes('app.asar') && !p.includes('app.asar.unpacked')) p = p.replace('app.asar', 'app.asar.unpacked');
+  return p;
+}
+
+function runSpotifyRoute(args, sync) {
+  const argv = ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', spotifyRoutePath(), ...args];
+  if (sync) {
+    try { return execFileSync('powershell.exe', argv, { windowsHide: true, encoding: 'utf8', timeout: 15000 }); } catch { return ''; }
+  }
+  return new Promise(resolve => execFile('powershell.exe', argv, { windowsHide: true, timeout: 15000 }, (err, out) => resolve(err ? '' : String(out))));
+}
+
+// A device nobody listens to: a dummy/null output first, then Steam's
+// streaming speakers. Never a cable or Voicemeeter input, which may be a mic path.
+async function pickSilentDevice() {
+  let list = [];
+  try { list = JSON.parse(await runSpotifyRoute(['-List'])); } catch { return null; }
+  const score = d => /dummy|null output|no output/i.test(d.name) ? 3 : /steam streaming speakers/i.test(d.name) ? 2 : 0;
+  return list.map(d => ({ ...d, s: score(d) })).filter(d => d.s > 0).sort((a, b) => b.s - a.s)[0] || null;
+}
+
+async function routeSpotifySilent(on) {
+  if (on) {
+    const pids = spotifyCapture ? String(spotifyCapture.findProcess('Spotify.exe') || '') : '';
+    if (pids && pids === spotifyRoutedPids) return;
+    const dev = await pickSilentDevice();
+    if (!spotifyAudioWanted) return;
+    if (!dev) {
+      sendSpotifyAudioStatus({ state: 'route', error: 'No silent output device found, so Spotify still plays on your speakers too.' });
+      return;
+    }
+    await runSpotifyRoute(['-Device', dev.id]);
+    spotifyRoutedPids = pids;
+    try { fs.writeFileSync(SPOTIFY_ROUTE_MARKER(), dev.name); } catch {}
+  } else {
+    spotifyRoutedPids = '';
+    if (!fs.existsSync(SPOTIFY_ROUTE_MARKER())) return;
+    runSpotifyRoute(['-Device', ''], true);
+    try { fs.unlinkSync(SPOTIFY_ROUTE_MARKER()); } catch {}
+  }
+}
+
+// Left routed by a crash last time: put Spotify back on the default device.
+app.whenReady().then(() => { try { if (fs.existsSync(SPOTIFY_ROUTE_MARKER())) routeSpotifySilent(false); } catch {} });
+
 function startSpotifyAudio(sampleRate) {
   if (!spotifyCapture) return { error: 'Spotify capture is not available in this build.' };
   if (!mainWindow || mainWindow.isDestroyed()) return { error: 'No window to send audio to.' };
   spotifyAudioWanted = true;
   spotifyAudioRate = Number(sampleRate) > 0 ? Math.round(Number(sampleRate)) : 48000;
   beginSpotifyCapture();
+  routeSpotifySilent(true);
 
   // Spotify restarting gets a new process id, and Spotify may be opened after
   // this is switched on: follow it rather than capturing a dead process.
@@ -1158,6 +1213,7 @@ function startSpotifyAudio(sampleRate) {
     const pid = spotifyCapture.findProcess('Spotify.exe');
     if (pid && (pid !== spotifyAudioPid || !spotifyCapture.isRunning())) {
       beginSpotifyCapture();
+      routeSpotifySilent(true);
     } else if (!pid && spotifyAudioPid) {
       try { spotifyCapture.stop(); } catch {}
       spotifyAudioPid = 0;
@@ -1169,6 +1225,7 @@ function startSpotifyAudio(sampleRate) {
 
 function stopSpotifyAudio() {
   spotifyAudioWanted = false;
+  routeSpotifySilent(false);
   clearInterval(spotifyAudioWatch);
   spotifyAudioWatch = null;
   try { spotifyCapture?.stop(); } catch {}
