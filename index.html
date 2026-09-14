@@ -267,29 +267,42 @@
     .st-lib-sep{height:1px;background:#282828;margin:8px 12px}
     .st-main{overflow-y:auto;min-width:0;position:relative;scrollbar-width:thin;scrollbar-color:#3a3a3a transparent}
     .st-view{display:none;padding:0 24px 40px}
-    .st-view[data-view="lyrics"]{position:relative;isolation:isolate;min-height:100%;padding:0 48px;overflow-x:clip}
-    .ly-bg{position:sticky;top:0;height:0;z-index:-1;pointer-events:none}
-    .ly-bg img{position:absolute;left:-60px;right:-60px;top:0;width:calc(100% + 120px);height:calc(100vh - 150px);object-fit:cover;filter:blur(90px) saturate(1.6) brightness(.45);transform:scale(1.4);transition:opacity .8s}
+    /* ── Lyrics page ── */
+    .st-view[data-view="lyrics"]{position:relative;isolation:isolate;padding:0;overflow:hidden}
+    .st-view[data-view="lyrics"].active{display:flex;flex-direction:column;height:100%}
+    .ly-bg{position:absolute;inset:0;z-index:-1;overflow:hidden;pointer-events:none;background:#0d0d0d}
+    .ly-bg img{position:absolute;width:140%;height:140%;left:-20%;top:-20%;object-fit:cover;filter:blur(80px) saturate(1.8) brightness(.5);opacity:.85;transition:opacity 1s ease}
     .ly-bg img[hidden]{display:block;opacity:0}
-    .ly-bg::after{content:'';position:absolute;left:-60px;right:-60px;top:0;height:calc(100vh - 150px);background:radial-gradient(120% 90% at 30% 20%,transparent 0%,rgba(18,18,18,.55) 70%,rgba(18,18,18,.85) 100%)}
-    .ly-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:14px;padding:22px 48px 28px;margin:0 -48px;background:linear-gradient(180deg,rgba(14,14,14,.92) 0%,rgba(14,14,14,.75) 60%,rgba(14,14,14,0) 100%);-webkit-mask-image:linear-gradient(180deg,#000 75%,transparent)}
-    .ly-head img{width:52px;height:52px;border-radius:8px;object-fit:cover;box-shadow:0 8px 24px rgba(0,0,0,.45)}
-    .ly-head img[hidden]{display:none}
-    .ly-head-title{font-size:17px;font-weight:700;color:#fff;letter-spacing:-.01em}
-    .ly-head-artist{font-size:13px;color:rgba(255,255,255,.65);margin-top:2px}
-    .st-lyrics{padding:12vh 0 55vh;max-width:980px}
-    .st-lyrics-line{font-size:clamp(28px,3.1vw,44px);font-weight:800;line-height:1.28;letter-spacing:-.02em;margin:0 0 22px;cursor:pointer;color:rgba(255,255,255,.28);filter:blur(1.2px);transform-origin:left center;transform:scale(.97);transition:filter .5s ease,transform .5s cubic-bezier(.22,1,.36,1),color .5s ease,opacity .5s}
-    .st-lyrics-line:hover{filter:none;color:rgba(255,255,255,.55)}
-    .st-lyrics-line.past{color:rgba(255,255,255,.42)}
-    .st-lyrics-line.near{filter:blur(.4px)}
-    .st-lyrics-line.now{filter:none;transform:scale(1);color:rgba(255,255,255,.3)}
-    .ly-w{display:inline;white-space:pre-wrap;transition:text-shadow .35s ease}
-    .st-lyrics-line.now .ly-w{background:linear-gradient(90deg,#fff calc(var(--p,0) * 1%),rgba(255,255,255,.32) calc(var(--p,0) * 1% + 8%));-webkit-background-clip:text;background-clip:text;color:transparent}
-    .st-lyrics-line.now .ly-w.lit{text-shadow:0 0 18px rgba(255,255,255,.45),0 0 42px rgba(255,255,255,.18)}
-    .st-lyrics-line.past .ly-w{color:rgba(255,255,255,.42)}
-    .st-lyrics-line.gap{font-size:28px;letter-spacing:.3em}
-    .st-lyrics.plain .st-lyrics-line{color:rgba(255,255,255,.9);filter:none;transform:none;cursor:default;font-size:clamp(22px,2.4vw,32px)}
-    .st-lyrics-msg{color:rgba(255,255,255,.7);font-size:18px;padding:20px 0}
+    .ly-bg img:first-child{animation:ly-drift-a 38s ease-in-out infinite alternate}
+    .ly-bg img:nth-child(2){mix-blend-mode:screen;opacity:.45;transform:scaleX(-1);animation:ly-drift-b 46s ease-in-out infinite alternate}
+    .ly-bg::after{content:'';position:absolute;inset:0;background:radial-gradient(90% 70% at 25% 35%,rgba(0,0,0,0) 0%,rgba(0,0,0,.35) 60%,rgba(0,0,0,.7) 100%),linear-gradient(180deg,rgba(0,0,0,.15),rgba(0,0,0,.45))}
+    @keyframes ly-drift-a{0%{transform:translate(-4%,-3%) rotate(0deg) scale(1)}100%{transform:translate(5%,4%) rotate(14deg) scale(1.12)}}
+    @keyframes ly-drift-b{0%{transform:scaleX(-1) translate(6%,5%) rotate(0deg)}100%{transform:scaleX(-1) translate(-5%,-6%) rotate(-18deg) scale(1.15)}}
+    .ly-head{flex-shrink:0;display:flex;align-items:center;gap:16px;padding:26px 56px 8px}
+    .ly-cover{width:58px;height:58px;border-radius:10px;overflow:hidden;background:rgba(255,255,255,.08);box-shadow:0 10px 30px rgba(0,0,0,.5);flex-shrink:0}
+    .ly-cover img{width:100%;height:100%;object-fit:cover;display:block}
+    .ly-cover img[hidden]{display:none}
+    .ly-eyebrow{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.5)}
+    .ly-head-title{font-size:18px;font-weight:800;color:#fff;letter-spacing:-.015em;margin-top:2px}
+    .ly-head-artist{font-size:13px;color:rgba(255,255,255,.65);margin-top:1px}
+    .st-lyrics{position:relative;flex:1;min-height:0;overflow-y:auto;padding:30vh 56px 50vh;scrollbar-width:none;-webkit-mask-image:linear-gradient(180deg,transparent 0%,#000 16%,#000 78%,transparent 100%);mask-image:linear-gradient(180deg,transparent 0%,#000 16%,#000 78%,transparent 100%)}
+    .st-lyrics::-webkit-scrollbar{display:none}
+    .st-lyrics-line{--d:4;max-width:1000px;font-size:clamp(28px,3.2vw,46px);font-weight:800;line-height:1.22;letter-spacing:-.025em;margin:0 0 26px;cursor:pointer;color:rgba(255,255,255,.34);opacity:max(.14, calc(1 - var(--d) * .2));filter:blur(calc(min(var(--d), 5) * .55px));transform-origin:left center;transform:scale(.965);transition:filter .6s ease,transform .6s cubic-bezier(.22,1,.36,1),opacity .6s ease,color .6s ease}
+    .st-lyrics.user-scroll .st-lyrics-line,.st-lyrics-line:hover{filter:none;opacity:1}
+    .st-lyrics-line:hover{color:rgba(255,255,255,.62)}
+    .st-lyrics-line.now{--d:0;transform:scale(1);opacity:1;filter:none;color:rgba(255,255,255,.34)}
+    .ly-w{display:inline-block;white-space:pre;transition:transform .45s cubic-bezier(.22,1,.36,1),text-shadow .45s ease}
+    .st-lyrics-line.now .ly-w{background:linear-gradient(90deg,#fff calc(var(--p,0) * 1%),rgba(255,255,255,.34) calc(var(--p,0) * 1% + 12%));-webkit-background-clip:text;background-clip:text;color:transparent}
+    .st-lyrics-line.now .ly-w.lit{transform:translateY(-2px);text-shadow:0 0 16px rgba(255,255,255,.5),0 0 38px rgba(255,255,255,.22)}
+    .st-lyrics-line.now .ly-w.done{text-shadow:0 0 12px rgba(255,255,255,.28)}
+    .st-lyrics-line.gap{display:flex;gap:14px;align-items:center;height:46px;margin-bottom:26px}
+    .ly-dot{width:13px;height:13px;border-radius:50%;background:rgba(255,255,255,.3);transition:background .3s,transform .3s,box-shadow .3s}
+    .st-lyrics-line.gap.now{animation:ly-breathe 2.4s ease-in-out infinite}
+    .st-lyrics-line.gap.now .ly-dot.on{background:#fff;transform:scale(1.15);box-shadow:0 0 14px rgba(255,255,255,.55)}
+    @keyframes ly-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+    .st-lyrics.plain{padding-top:40px;-webkit-mask-image:none;mask-image:none}
+    .st-lyrics.plain .st-lyrics-line{--d:0;color:rgba(255,255,255,.88);filter:none;opacity:1;transform:none;cursor:default;font-size:clamp(22px,2.4vw,32px)}
+    .st-lyrics-msg{color:rgba(255,255,255,.72);font-size:20px;font-weight:600;padding:20px 0;margin-top:-18vh}
     .st-lyrics-src{color:rgba(255,255,255,.35);font-size:11px;margin-top:40px}
     .st-view.active{display:block;animation:st-view-in .28s cubic-bezier(.22,1,.36,1)}
     @keyframes st-view-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
@@ -904,10 +917,10 @@
       <div class="sp-mixer-host"></div>
     </section>
     <section class="st-view" data-view="lyrics">
-      <div class="ly-bg" aria-hidden="true"><img id="lyBg" alt="" hidden></div>
+      <div class="ly-bg" aria-hidden="true"><img id="lyBg" alt="" hidden><img id="lyBg2" alt="" hidden></div>
       <div class="ly-head">
-        <img id="lyCover" alt="" hidden>
-        <div class="ly-head-text"><div class="ly-head-title" id="lyTitle"></div><div class="ly-head-artist" id="lyArtist"></div></div>
+        <div class="ly-cover"><img id="lyCover" alt="" hidden></div>
+        <div class="ly-head-text"><div class="ly-eyebrow">Lyrics</div><div class="ly-head-title" id="lyTitle"></div><div class="ly-head-artist" id="lyArtist"></div></div>
       </div>
       <div class="st-lyrics" id="stLyrics"><div class="st-lyrics-msg">Play a song to see its lyrics.</div></div>
     </section>
@@ -1941,6 +1954,7 @@ async function studioLyricsTick(force) {
 
   const setImg = (id, src) => { const i = document.getElementById(id); if (!i) return; if (src) { if (i.getAttribute('src') !== src) i.setAttribute('src', src); i.hidden = false; } else i.hidden = true; };
   setImg('lyBg', t?.cover || '');
+  setImg('lyBg2', t?.cover || '');
   setImg('lyCover', t?.cover || '');
   const setText = (id, v) => { const e = document.getElementById(id); if (e && e.textContent !== v) e.textContent = v; };
   setText('lyTitle', t ? t.title : '');
@@ -1948,7 +1962,7 @@ async function studioLyricsTick(force) {
 
   const key = t ? t.title + '|' + t.artist : '';
   if (key !== lyricsState.key || (force === true && !lyricsState.lines.length && !lyricsState.loading)) {
-    lyricsState = { ...lyricsState, key, lines: [], synced: false, nowIdx: -2, loading: !!t };
+    lyricsState = { ...lyricsState, key, lines: [], synced: false, nowIdx: -2, loading: !!t, scrolledOnce: false, lineEls: null, wordEls: null };
     el.className = 'st-lyrics';
     if (!t) { el.innerHTML = '<div class="st-lyrics-msg">Play a song to see its lyrics.</div>'; return; }
     el.innerHTML = '<div class="st-lyrics-msg">Loading lyrics…</div>';
@@ -1966,9 +1980,20 @@ async function studioLyricsTick(force) {
       lyricsState.lines = lyricsParse(r.synced, t.durationMs);
       el.innerHTML = lyricsState.lines.map((l, i) => l.words.length
         ? '<div class="st-lyrics-line" data-i="' + i + '">' + l.words.map(w => '<span class="ly-w">' + esc(w.text) + '</span>').join('') + '</div>'
-        : '<div class="st-lyrics-line gap" data-i="' + i + '">&#8226; &#8226; &#8226;</div>').join('') +
+        : '<div class="st-lyrics-line gap" data-i="' + i + '"><span class="ly-dot"></span><span class="ly-dot"></span><span class="ly-dot"></span></div>').join('') +
         '<div class="st-lyrics-src">Lyrics from LRCLIB</div>';
       lyricsState.lineEls = [...el.querySelectorAll('.st-lyrics-line')];
+      if (!el.dataset.scrollHooked) {
+        el.dataset.scrollHooked = '1';
+        const hold = () => {
+          lyricsState.userScrollUntil = Date.now() + 3500;
+          el.classList.add('user-scroll');
+          clearTimeout(lyricsState.userScrollTimer);
+          lyricsState.userScrollTimer = setTimeout(() => { el.classList.remove('user-scroll'); lyricsState.nowIdx = -2; }, 3500);
+        };
+        el.addEventListener('wheel', hold, { passive: true });
+        el.addEventListener('touchmove', hold, { passive: true });
+      }
       lyricsState.wordEls = lyricsState.lineEls.map(n => [...n.querySelectorAll('.ly-w')]);
       lyricsState.lineEls.forEach(n => n.onclick = () => {
         const l = lyricsState.lines[Number(n.dataset.i)];
@@ -2000,12 +2025,15 @@ function lyricsFrame() {
       lyricsState.nowIdx = idx;
       lyricsState.lineEls.forEach((n, i) => {
         n.classList.toggle('now', i === idx);
-        n.classList.toggle('past', i < idx);
-        n.classList.toggle('near', Math.abs(i - idx) === 1);
+        n.style.setProperty('--d', String(Math.min(6, Math.abs(i - Math.max(idx, 0)))));
       });
-      if (prev >= 0) lyricsState.wordEls[prev]?.forEach(w => { w.style.removeProperty('--p'); w.classList.remove('lit'); });
-      const cur = lyricsState.lineEls[idx];
-      if (cur) cur.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      if (prev >= 0) lyricsState.wordEls[prev]?.forEach(w => { w.style.removeProperty('--p'); w.classList.remove('lit', 'done'); });
+      const cur = lyricsState.lineEls[Math.max(idx, 0)];
+      const box = document.getElementById('stLyrics');
+      if (cur && box && !(lyricsState.userScrollUntil > Date.now())) {
+        box.scrollTo({ top: cur.offsetTop - box.clientHeight * 0.4 + cur.offsetHeight / 2, behavior: prev === -2 && !lyricsState.scrolledOnce ? 'auto' : 'smooth' });
+        lyricsState.scrolledOnce = true;
+      }
     }
     const line = lines[idx];
     const words = lyricsState.wordEls[idx];
@@ -2017,8 +2045,13 @@ function lyricsFrame() {
         if (!n) return;
         const v = p.toFixed(1);
         if (n.style.getPropertyValue('--p') !== v) n.style.setProperty('--p', v);
-        n.classList.toggle('lit', p > 0 && pos < w.end + 400);
+        n.classList.toggle('lit', p > 0 && p < 100);
+        n.classList.toggle('done', p >= 100);
       });
+    } else if (line && !line.words.length) {
+      const next = lines[idx + 1] ? lines[idx + 1].at : line.at + 5000;
+      const frac = (pos - line.at) / Math.max(1, next - line.at);
+      lyricsState.lineEls[idx]?.querySelectorAll('.ly-dot').forEach((d, k) => d.classList.toggle('on', frac >= (k + 1) / 3.4));
     }
   }
   lyricsState.raf = requestAnimationFrame(lyricsFrame);
