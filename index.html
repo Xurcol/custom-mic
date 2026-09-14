@@ -231,7 +231,15 @@
     #studioShell{display:none}
     html.layout-studio #studioShell{display:grid;position:fixed;top:34px;left:0;right:0;bottom:0;z-index:5;grid-template-columns:272px minmax(0,1fr);grid-template-rows:minmax(0,1fr) 84px;gap:8px;padding:8px 8px 0;background:#000;color:#fff;
       --card:rgba(255,255,255,.04);--card-hover:rgba(255,255,255,.07);--card-border:rgba(255,255,255,.07);--glass:#181818;--glass-border:#2a2a2a;--input-bg:#242424;--text:#e8e8e8;--text-muted:#a7a7a7;--header:#fff;--bg-hover:#2a2a2a}
-    html.layout-studio .app,html.layout-studio #bgVideo{display:none !important}
+    html.layout-studio .app,html.layout-studio:not(.studio-video) #bgVideo{display:none !important}
+    /* Studio over a background video: the shell turns see-through and the
+       cards become frosted panels so the video shows between them. */
+    html.layout-studio.studio-video #bgVideo{z-index:1}
+    html.layout-studio.studio-video body{background:#000 !important}
+    html.layout-studio.studio-video #studioShell{background:rgba(0,0,0,.28)}
+    html.layout-studio.studio-video .st-card{background:rgba(18,18,18,.66);backdrop-filter:blur(22px) saturate(1.15)}
+    html.layout-studio.studio-video .st-player{background:rgba(0,0,0,.55);backdrop-filter:blur(22px)}
+    html.layout-studio.studio-video .titlebar{background:rgba(0,0,0,.55)}
     html.layout-studio body{background:#000 !important}
     html.layout-studio .titlebar{background:#000;backdrop-filter:none;border-bottom:none}
     .st-card{background:#121212;border-radius:8px}
@@ -363,6 +371,152 @@
     .st-hero-mosaic[hidden]{display:none}
     .st-hero-mosaic.grid{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
     .st-hero-mosaic img{width:100%;height:100%;object-fit:cover;display:block}
+    /* ── Spotify in Studio ── */
+    .sp-nav{padding:4px 8px 6px}
+    .sp-nav .st-nav-item.small{padding:7px 12px}
+    .sp-nav-label{padding:8px 12px 4px;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#1ed760}
+    .sp-page{min-height:120px}
+    .sp-loading,.sp-empty{padding:28px 4px;color:#b3b3b3;font-size:14px}
+    .sp-greeting{font-size:32px;font-weight:800;letter-spacing:-.02em;padding:28px 0 18px;color:#fff}
+    .sp-shortcuts{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px;margin-bottom:32px}
+    .sp-shortcut{display:flex;align-items:center;gap:12px;height:56px;background:rgba(255,255,255,.07);border-radius:4px;overflow:hidden;cursor:pointer;font-weight:700;font-size:14px;color:#fff;transition:background .15s}
+    .sp-shortcut:hover{background:rgba(255,255,255,.15)}
+    .sp-shortcut>span:last-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:10px}
+    .sp-shortcut-art{width:56px;height:56px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#282828;color:#fff;font-size:20px;box-shadow:0 4px 12px rgba(0,0,0,.4)}
+    .sp-shortcut-art img{width:100%;height:100%;object-fit:cover}
+    .sp-shortcut-art.liked,.sp-tile-art.liked,.sp-hero-art.liked{background:linear-gradient(135deg,#450af5,#8e8ee5 60%,#c4efd9);color:#fff}
+    .sp-shelf{margin:0 0 32px}
+    .sp-shelf h2,.sp-h2,.sp-search-top h2{font-size:22px;font-weight:800;color:#fff;margin:0 0 14px;letter-spacing:-.01em}
+    .sp-h2{margin-top:18px}
+    .sp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:4px}
+    .sp-tile{padding:12px;border-radius:6px;cursor:pointer;transition:background .2s;min-width:0}
+    .sp-tile:hover{background:#1f1f1f}
+    .sp-tile-art{position:relative;aspect-ratio:1;border-radius:6px;background:#282828;margin-bottom:10px;display:flex;align-items:center;justify-content:center;color:#7a7a7a;font-size:36px;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+    .sp-tile-art img{width:100%;height:100%;object-fit:cover;border-radius:inherit}
+    .sp-tile-art.round{border-radius:50%}
+    .sp-tile-play{position:absolute;right:8px;bottom:8px;width:46px;height:46px;border-radius:50%;border:none;background:#1ed760;color:#000;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;transform:translateY(8px);transition:opacity .2s,transform .2s,background .15s;box-shadow:0 8px 16px rgba(0,0,0,.35)}
+    .sp-tile-play svg{width:20px;height:20px}
+    .sp-tile:hover .sp-tile-play,.sp-top:hover .sp-tile-play{opacity:1;transform:none}
+    .sp-tile-play:hover{background:#3be477;transform:scale(1.06)!important}
+    .sp-tile-title{font-size:15px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .sp-tile-sub{font-size:13px;color:#b3b3b3;margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .sp-searchbar{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:10px;margin:18px 0 22px;padding:0 16px;height:48px;border-radius:999px;background:#242424;border:2px solid transparent;color:#b3b3b3;max-width:480px;transition:border-color .15s,background .15s}
+    .sp-searchbar:hover{background:#2a2a2a}
+    .sp-searchbar:focus-within{border-color:#fff}
+    .sp-searchbar svg{width:22px;height:22px;flex-shrink:0}
+    .sp-searchbar input{flex:1;background:none;border:none;outline:none;color:#fff;font-size:15px}
+    .sp-searchbar input::-webkit-search-cancel-button{filter:invert(1)}
+    .sp-search-top{display:grid;grid-template-columns:minmax(260px,420px) minmax(0,1fr);gap:24px;margin-bottom:32px}
+    @media (max-width:1150px){.sp-search-top{grid-template-columns:1fr}}
+    .sp-top{position:relative;padding:20px;border-radius:8px;background:#181818;cursor:pointer;transition:background .2s;min-height:210px}
+    .sp-top:hover{background:#282828}
+    .sp-top-art{width:96px;height:96px;border-radius:6px;overflow:hidden;background:#282828;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+    .sp-top-art.round{border-radius:50%}
+    .sp-top-art img{width:100%;height:100%;object-fit:cover}
+    .sp-top-name{font-size:30px;font-weight:800;color:#fff;margin:18px 0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.02em}
+    .sp-top-sub{font-size:14px;color:#b3b3b3}
+    .sp-top .sp-tile-play{right:20px;bottom:20px;width:52px;height:52px}
+    .sp-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+    .sp-chips button{padding:6px 14px;border-radius:999px;border:none;background:#2a2a2a;color:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s}
+    .sp-chips button:hover{background:#353535}
+    .sp-chips button.on{background:#fff;color:#000}
+    .sp-tracks{display:flex;flex-direction:column}
+    .sp-track{display:grid;grid-template-columns:32px minmax(0,4fr) minmax(0,3fr) 56px;align-items:center;gap:16px;padding:6px 16px;border-radius:4px;color:#b3b3b3;font-size:14px;cursor:pointer;transition:background .1s}
+    .sp-tracks.no-album .sp-track{grid-template-columns:32px minmax(0,1fr) 56px}
+    .sp-track:hover{background:rgba(255,255,255,.1)}
+    .sp-track.head{cursor:default;background:none!important;border-bottom:1px solid #2a2a2a;border-radius:0;margin-bottom:8px;padding-top:4px;padding-bottom:8px;font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+    .sp-t-num{text-align:right;font-variant-numeric:tabular-nums}
+    .sp-t-main{display:flex;align-items:center;gap:12px;min-width:0}
+    .sp-t-main img,.sp-t-noart{width:40px;height:40px;border-radius:4px;object-fit:cover;flex-shrink:0;background:#282828;display:flex;align-items:center;justify-content:center;color:#7a7a7a}
+    .sp-t-text{min-width:0;display:flex;flex-direction:column}
+    .sp-t-name{color:#fff;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .sp-t-artist,.sp-t-album{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}
+    .sp-t-dur{text-align:right;font-variant-numeric:tabular-nums}
+    .sp-track.playing .sp-t-name,.sp-track.playing .sp-t-num{color:#1ed760}
+    .sp-e{display:inline-block;font-style:normal;font-size:9px;font-weight:700;background:#b3b3b3;color:#121212;border-radius:2px;padding:0 4px;margin-right:6px;line-height:15px;vertical-align:1px}
+    .sp-hero{display:flex;align-items:flex-end;gap:24px;padding:40px 24px 24px;margin:-8px -24px 0;background:linear-gradient(180deg,#404040 0%,#121212 100%)}
+    .sp-hero-art{width:200px;height:200px;flex-shrink:0;border-radius:6px;overflow:hidden;background:#282828;box-shadow:0 8px 40px rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;color:#fff;font-size:64px}
+    .sp-hero-art.round{border-radius:50%}
+    .sp-hero-art img{width:100%;height:100%;object-fit:cover}
+    .sp-hero-text{min-width:0}
+    .sp-hero h1{font-size:clamp(32px,5vw,76px);font-weight:900;letter-spacing:-.04em;line-height:1.02;margin:8px 0 10px;color:#fff;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .sp-hero-desc{color:#d0d0d0;font-size:14px;margin-bottom:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .sp-hero-meta{color:#fff;font-size:14px;font-weight:600}
+    .st-play-big.sp-green{background:#1ed760}
+    .st-play-big.sp-green:hover{background:#3be477}
+    .sp-back{position:relative;z-index:1;margin:16px 0 0;padding:6px 14px;border-radius:999px;border:none;background:rgba(0,0,0,.6);color:#fff;font-weight:700;font-size:13px;cursor:pointer}
+    .sp-back:hover{background:#000}
+    .sp-now{display:flex;gap:44px;align-items:center;padding:40px 0 20px;flex-wrap:wrap}
+    .sp-now-art{position:relative;width:min(340px,38vw);aspect-ratio:1;border-radius:8px;overflow:hidden;background:#282828;box-shadow:0 16px 48px rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;color:#535353;flex-shrink:0}
+    .sp-now-art svg{width:96px;height:96px}
+    .sp-now-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+    .sp-now-art img[hidden]{display:none}
+    .sp-now-info{flex:1;min-width:280px;max-width:560px}
+    .sp-now-info h1{font-size:clamp(28px,3.4vw,48px);font-weight:900;letter-spacing:-.03em;color:#fff;margin:8px 0 6px;line-height:1.05}
+    .sp-now-sub{color:#b3b3b3;font-size:16px;margin-bottom:24px}
+    .sp-now-progress{display:flex;align-items:center;gap:10px;font-size:12px;color:#b3b3b3;font-variant-numeric:tabular-nums}
+    .sp-now-progress span{min-width:36px;text-align:center}
+    .sp-now-progress input{flex:1}
+    .sp-now-controls{display:flex;align-items:center;justify-content:center;gap:24px;margin:18px 0}
+    .sp-now-controls .st-ctl svg{width:22px;height:22px}
+    .sp-now-controls .st-ctl-play.big{width:58px;height:58px}
+    .sp-now-controls .st-ctl-play.big svg{width:22px;height:22px}
+    .st-ctl.on{color:#1ed760}
+    .st-ctl.one{position:relative}
+    .st-ctl.one::after{content:'1';position:absolute;top:0;right:0;font-size:9px;font-weight:800}
+    .st-ctl:disabled{opacity:.35;cursor:default}
+    .sp-now-vol{display:flex;align-items:center;gap:10px;color:#b3b3b3;max-width:260px;margin:0 auto}
+    .sp-now-vol svg{width:20px;height:20px;flex-shrink:0}
+    .sp-now-vol input{flex:1}
+    .sp-now input[type=range],.sp-mix input[type=range]{-webkit-appearance:none;appearance:none;height:4px;border-radius:2px;background:linear-gradient(to right,#fff var(--pct,0%),#4d4d4d var(--pct,0%));cursor:pointer;margin:0}
+    .sp-now input[type=range]:hover,.sp-mix input[type=range]:hover{background:linear-gradient(to right,#1ed760 var(--pct,0%),#4d4d4d var(--pct,0%))}
+    .sp-now input[type=range]::-webkit-slider-thumb,.sp-mix input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:#fff}
+    .sp-now input[type=range]:disabled{opacity:.4;cursor:default}
+    /* mixer: Now Playing, Microphone and Settings */
+    .sp-mix{margin-top:16px;padding:16px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}
+    .sp-mix-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;font-size:14px;font-weight:800;color:var(--header,#fff)}
+    .sp-badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;background:rgba(255,255,255,.08);color:#b3b3b3;white-space:nowrap}
+    .sp-badge.live{background:rgba(30,215,96,.16);color:#1ed760}
+    .sp-badge.live::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:#1ed760;margin-right:6px;vertical-align:1px}
+    .sp-mix-row{display:grid;grid-template-columns:minmax(0,1.3fr) 44px minmax(90px,1fr) 44px;align-items:center;gap:12px;padding:9px 0}
+    .sp-mix-row+.sp-mix-row{border-top:1px solid rgba(255,255,255,.06)}
+    .sp-mix-label{min-width:0;display:flex;flex-direction:column;gap:2px}
+    .sp-mix-label b{font-size:13px;color:var(--header,#fff);font-weight:700}
+    .sp-mix-label span{font-size:11px;color:var(--text-muted,#a7a7a7);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .sp-mix-val{font-size:12px;font-weight:700;text-align:right;color:var(--text,#e8e8e8);font-variant-numeric:tabular-nums}
+    .sp-mix-tip{font-size:11px;color:var(--text-muted,#a7a7a7);margin-top:8px}
+    .sp-switch{position:relative;width:40px;height:22px;border-radius:999px;border:none;background:#535353;cursor:pointer;transition:background .15s;padding:0}
+    .sp-switch::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .15s}
+    .sp-switch.on{background:#1ed760}
+    .sp-switch.on::after{transform:translateX(18px)}
+    .sp-mixer-host.compact .sp-mix{margin-top:10px;padding:10px 12px}
+    .sp-mixer-host.compact .sp-mix-tip{display:none}
+    /* account */
+    .sp-hero-connect{padding:56px 0 24px;max-width:680px}
+    .sp-hero-connect h1{font-size:40px;font-weight:900;letter-spacing:-.03em;color:#fff;margin:0 0 8px}
+    .sp-hero-connect p{color:#b3b3b3;font-size:15px;margin:0 0 24px}
+    .sp-acct{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:14px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}
+    .sp-acct.setup{flex-direction:column;align-items:stretch;gap:12px}
+    .sp-avatar{width:48px;height:48px;border-radius:50%;overflow:hidden;background:#535353;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;flex-shrink:0}
+    .sp-avatar img{width:100%;height:100%;object-fit:cover}
+    .sp-acct-text{flex:1;min-width:180px}
+    .sp-acct-name{font-size:15px;font-weight:800;color:var(--header,#fff)}
+    .sp-acct-sub{font-size:12px;color:var(--text-muted,#a7a7a7);margin-top:2px}
+    .sp-acct-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .sp-connect-row{display:flex;gap:8px}
+    .sp-input{flex:1;min-width:0;height:36px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:#1a1a1a;color:#fff;font-family:Consolas,monospace;font-size:12px;outline:none}
+    .sp-input:focus{border-color:#fff}
+    .sp-pill{height:32px;padding:0 16px;border-radius:999px;border:1px solid rgba(255,255,255,.3);background:transparent;color:#fff;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;transition:transform .1s,border-color .15s,background .15s}
+    .sp-pill:hover{border-color:#fff;transform:scale(1.03)}
+    .sp-pill.primary{background:#1ed760;border-color:#1ed760;color:#000}
+    .sp-pill.primary:hover{background:#3be477;border-color:#3be477}
+    .sp-connect-row .sp-pill{height:36px}
+    .sp-pill.tiny{height:22px;padding:0 10px;font-size:11px}
+    .sp-howto{font-size:12px;color:var(--text-muted,#a7a7a7)}
+    .sp-howto summary{cursor:pointer;color:var(--text,#e8e8e8);font-weight:600}
+    .sp-howto ol{margin:10px 0 0 18px;display:flex;flex-direction:column;gap:8px}
+    .sp-howto a{color:#1ed760}
+    .sp-howto code{font-family:Consolas,monospace;background:rgba(255,255,255,.08);padding:1px 6px;border-radius:4px;color:#fff}
 
     .soundpad-nowbar{display:none;margin:0 0 12px;padding:14px 16px;background:linear-gradient(135deg,rgba(196,113,245,.06),rgba(124,92,252,.04));border:1px solid rgba(196,113,245,.15);border-radius:var(--radius-md);backdrop-filter:blur(12px);box-shadow:0 0 30px rgba(196,113,245,.05)}
     .soundpad-nowbar.show{display:block;animation:fadeSlideIn .4s cubic-bezier(.16,1,.3,1)}
@@ -591,6 +745,14 @@
       <button class="st-nav-item" data-view="mic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8"/></svg><span>Microphone</span></button>
       <button class="st-nav-item" data-view="presets"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="m12 2.5 2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z"/></svg><span>Presets</span></button>
     </nav>
+    <nav class="st-card st-nav sp-nav">
+      <div class="sp-nav-label">Spotify</div>
+      <button class="st-nav-item small" data-view="sp-home"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3.2 2.5 11h2.7v9.8h5.3v-6h3v6h5.3V11h2.7z"/></svg><span>Home</span></button>
+      <button class="st-nav-item small" data-view="sp-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4.8-4.8"/></svg><span>Search</span></button>
+      <button class="st-nav-item small" data-view="sp-library"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 3v18M9 3v18M14 4l6 16"/></svg><span>Your Library</span></button>
+      <button class="st-nav-item small" data-view="sp-playlists"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h13M3 12h13M3 18h8"/><path d="M19 14v7"/><circle cx="17" cy="20" r="2" fill="currentColor"/></svg><span>Playlists</span></button>
+      <button class="st-nav-item small" data-view="sp-now"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span>Now Playing</span></button>
+    </nav>
     <div class="st-card st-lib">
       <div class="st-lib-head">
         <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 3v18M9 3v18M14 4l6 16"/></svg>Your Library</span>
@@ -598,10 +760,6 @@
       </div>
       <div class="st-lib-list" id="stLibList"></div>
       <div class="st-lib-sep"></div>
-      <button class="st-nav-item small" data-view="camera"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m23 7-7 5 7 5z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg><span>Camera</span></button>
-      <button class="st-nav-item small" data-view="ai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg><span>AI Voice Changer</span></button>
-      <button class="st-nav-item small" data-view="recorder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4" fill="currentColor"/></svg><span>Screen Recorder</span></button>
-      <button class="st-nav-item small" data-view="apo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h3l3-8 4 16 3-8h7"/></svg><span>Equalizer APO</span></button>
       <button class="st-nav-item small" data-view="themes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg><span>Settings &amp; Themes</span></button>
     </div>
   </aside>
@@ -626,10 +784,61 @@
     <section class="st-view" data-view="eq"><h1 class="st-title">EQ &amp; Effects</h1><div class="st-slot" data-slot="eqEnabled"></div><div class="st-slot" data-slot="eq"></div></section>
     <section class="st-view" data-view="mic"><h1 class="st-title">Microphone</h1><div class="st-slot" data-slot="mic"></div></section>
     <section class="st-view" data-view="presets"><h1 class="st-title">Presets</h1><div class="st-slot" data-slot="presets"></div></section>
-    <section class="st-view" data-view="camera"><h1 class="st-title">Camera</h1><div class="st-slot" data-slot="camera"></div></section>
-    <section class="st-view" data-view="ai"><h1 class="st-title">AI Voice Changer</h1><div class="st-slot" data-slot="ai"></div></section>
-    <section class="st-view" data-view="recorder"><h1 class="st-title">Screen Recorder</h1><div class="st-slot" data-slot="recorder"></div></section>
-    <section class="st-view" data-view="apo"><h1 class="st-title">Equalizer APO</h1><div class="st-slot" data-slot="apo"></div></section>
+    <section class="st-view" data-view="sp-home"><div id="spHome" class="sp-page"></div></section>
+    <section class="st-view" data-view="sp-search">
+      <div class="sp-searchbar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4.8-4.8"/></svg>
+        <input id="spSearchInput" type="search" placeholder="What do you want to play?" autocomplete="off" spellcheck="false">
+      </div>
+      <div id="spSearchResults" class="sp-page"></div>
+    </section>
+    <section class="st-view" data-view="sp-library">
+      <h1 class="st-title">Your Library</h1>
+      <div class="sp-chips" id="spLibChips">
+        <button data-sp-lib="playlists">Playlists</button>
+        <button data-sp-lib="albums">Albums</button>
+        <button data-sp-lib="artists">Artists</button>
+        <button data-sp-lib="liked">Liked Songs</button>
+        <button data-sp-lib="recent">Recently played</button>
+      </div>
+      <div id="spLibrary" class="sp-page"></div>
+    </section>
+    <section class="st-view" data-view="sp-playlists"><h1 class="st-title">Playlists</h1><div id="spPlaylists" class="sp-page"></div></section>
+    <section class="st-view" data-view="sp-detail">
+      <button class="sp-back" data-sp-action="back">&#8249; Back</button>
+      <div id="spDetail" class="sp-page"></div>
+    </section>
+    <section class="st-view" data-view="sp-now">
+      <div class="sp-now" id="spNowRoot">
+        <div class="sp-now-art">
+          <img id="spNowArt" alt="" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        </div>
+        <div class="sp-now-info">
+          <div class="st-eyebrow" id="spNowDevice"></div>
+          <h1 id="spNowTitle">Nothing playing</h1>
+          <div class="sp-now-sub" id="spNowSub"></div>
+          <div class="sp-now-progress">
+            <span id="spNowPos">0:00</span>
+            <input type="range" id="spNowSeek" min="0" max="1000" value="0" onchange="spNowSeekCommit(this.value)" aria-label="Seek">
+            <span id="spNowDur">0:00</span>
+          </div>
+          <div class="sp-now-controls">
+            <button class="st-ctl" id="spNowShuffle" onclick="spotifyCommand('shuffle', !(spotifyState && spotifyState.shuffle))" title="Shuffle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="m4 4 5 5"/></svg></button>
+            <button class="st-ctl" onclick="spotifyCommand('prev')" title="Previous"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 5.5v13a1 1 0 0 1-1.55.83L9 13.5V18a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v4.5l8.45-5.83A1 1 0 0 1 19 5.5z"/></svg></button>
+            <button class="st-ctl st-ctl-play big" id="spNowPlay" onclick="spotifyCommand('toggle')" title="Play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.14v13.72a1 1 0 0 0 1.52.85l10.29-6.86a1 1 0 0 0 0-1.7L9.52 4.29A1 1 0 0 0 8 5.14z"/></svg></button>
+            <button class="st-ctl" onclick="spotifyCommand('next')" title="Next"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 5.5v13a1 1 0 0 0 1.55.83L15 13.5V18a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-1a1 1 0 0 0-1 1v4.5L6.55 4.67A1 1 0 0 0 5 5.5z"/></svg></button>
+            <button class="st-ctl" id="spNowRepeat" onclick="spotifyCommand('repeat')" title="Repeat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="m7 22-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/></svg></button>
+          </div>
+          <div class="sp-now-vol">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg>
+            <input type="range" id="spNowVol" min="0" max="100" value="50" oninput="spSetVolume(this.value)" aria-label="Spotify volume">
+          </div>
+        </div>
+      </div>
+      <div id="spQueue"></div>
+      <div class="sp-mixer-host"></div>
+    </section>
     <section class="st-view" data-view="themes"><h1 class="st-title">Settings &amp; Themes</h1><div class="st-slot" data-slot="themes"></div></section>
   </main>
 
@@ -688,11 +897,7 @@
     </div>
     <div class="tab-bar">
       <button class="tab-btn active" data-tab="soundpad" onclick="switchTab('soundpad')">Custom Mic</button>
-      <button class="tab-btn" data-tab="apo" onclick="switchTab('apo')">Equalizer APO</button>
-      <button class="tab-btn" data-tab="obs" onclick="switchTab('obs')">Camera</button>
-      <button class="tab-btn" data-tab="voicemod" onclick="switchTab('voicemod')">AI Voice Changer</button>
-      <button class="tab-btn" data-tab="recorder" onclick="switchTab('recorder')">Screen Recorder</button>
-      <button class="tab-btn" data-tab="themes" onclick="switchTab('themes')">Themes</button>
+      <button class="tab-btn" data-tab="themes" onclick="switchTab('themes')">Settings</button>
     </div>
 
     <!-- Soundpad Tab -->
@@ -735,6 +940,7 @@
           <label>Monitor Output:</label>
           <select id="monitorOutputDevice" onchange="switchMonitorOutput()"></select>
         </div>
+        <div class="sp-mixer-host compact"></div>
         <div id="micExtras" hidden>
         <div class="route-tools">
           <div class="route-actions">
@@ -1088,9 +1294,10 @@
 
       <div class="mic-section" style="margin-top:12px">
         <h3>Spotify</h3>
-        <div class="monitor-row">
-          <label for="spotifyFollowToggle">Follow the Spotify app</label>
-          <button class="eq-fx-toggle" id="spotifyFollowToggle" onclick="toggleSpotifyFollow()" title="Show and control what the Spotify desktop app is playing"></button>
+        <div class="sp-account-host"></div>
+        <div class="monitor-row" style="margin-top:12px">
+          <label for="spotifyFollowToggle">Show what the Spotify app is playing</label>
+          <button class="eq-fx-toggle" id="spotifyFollowToggle" onclick="toggleSpotifyFollow()" title="Show what the Spotify app on this PC is playing"></button>
         </div>
         <div class="sp-card" id="spotifyCard">
           <img class="sp-cover" id="spotifyCover" alt="" hidden>
@@ -1104,17 +1311,7 @@
             <button class="mini-btn" onclick="spotifyCommand('next')" title="Next track">Next</button>
           </div>
         </div>
-        <div class="monitor-row" style="margin-top:10px">
-          <label for="spotifyToMicToggle">Send Spotify to mic</label>
-          <button class="eq-fx-toggle" id="spotifyToMicToggle" onclick="toggleSpotifyToMic()" title="Mix only Spotify's audio into your main output, so people in your call hear it"></button>
-        </div>
-        <div class="eq-gain-row" style="margin:6px 0 0">
-          <label>Spotify level</label>
-          <input type="range" id="spotifyMicLevel" min="0" max="150" step="1" value="70" oninput="setSpotifyMicLevel(this.value)">
-          <span class="eq-gain-val" id="spotifyMicLevelVal">70%</span>
-        </div>
-        <div id="spotifyToMicStatus" style="font-size:10px;color:var(--text-muted);margin-top:4px"></div>
-        <div style="font-size:10px;color:var(--text-muted);margin-top:6px">Reads the Spotify desktop app through Windows' media controls: no login, and free Spotify works. In the Studio layout the player bar shows Spotify whenever the soundpad isn't playing.</div>
+        <div class="sp-mixer-host"></div>
       </div>
 
       <div class="mic-section" style="margin-top:12px">
@@ -1134,6 +1331,10 @@
           <button class="mini-btn" onclick="themeResetBackgroundVideo()">Use Default</button>
           <button class="mini-btn danger" onclick="themeClearBackgroundVideo()">No Video</button>
         </div>
+        <div class="monitor-row" style="margin-top:10px">
+          <label for="themeStudioVideoToggle">Show in Studio / Spotify layout</label>
+          <button class="eq-fx-toggle" id="themeStudioVideoToggle" onclick="themeToggleStudioVideo()" title="Play the background video behind the Studio layout too"></button>
+        </div>
         <div id="themeBgVideoName" style="font-size:10px;color:var(--text-muted);margin-top:6px"></div>
         <div class="eq-gain-row" style="margin-top:10px">
           <label>Opacity</label>
@@ -1146,391 +1347,47 @@
           <span class="eq-gain-val" id="themeBgBlurVal">0px</span>
         </div>
       </div>
-    </div>
 
-    <!-- Equalizer APO Tab -->
-    <div class="tab-content" id="tab-apo">
-      <div class="eq-section-title" style="margin-bottom:12px">Equalizer APO Config Manager</div>
-      <p style="font-size:11px;color:var(--text-muted);margin:0 0 16px">Import and manage Equalizer APO configuration files, plugin sets, and VST plugins. Settings are saved automatically.</p>
+      <div class="mic-section" id="settingsApo" style="margin-top:12px">
+        <h3>Equalizer APO</h3>
+        <p style="font-size:11px;color:var(--text-muted);margin:0 0 16px">Import and manage Equalizer APO configuration files, plugin sets, and VST plugins. Settings are saved automatically.</p>
 
-      <div>
-        <div class="eq-section-title">Plugin Sets</div>
-        <div class="plugin-library" id="pluginLibrary"></div>
-        <div class="plugin-actions">
-          <button class="mini-btn" onclick="importPluginSets()">Import</button>
-          <button class="mini-btn" onclick="applyActivePluginSet()">Apply</button>
-        </div>
-      </div>
-
-      <div style="margin-top:20px">
-        <div class="eq-section-title">APO Config Files</div>
-        <div class="plugin-library" id="apoConfigLibrary"></div>
-        <div class="plugin-actions">
-          <button class="mini-btn" onclick="importPluginSets()">Import APO Config</button>
-          <button class="mini-btn" onclick="exportApoConfig()">Export</button>
-        </div>
-      </div>
-
-      <div style="margin-top:20px">
-        <div class="eq-section-title">VST2 Plugins <span id="vstStatus" style="float:right;font-size:10px;font-weight:400;color:var(--text-muted)"></span></div>
-        <p style="font-size:11px;color:var(--text-muted);margin:4px 0 8px">Load VST2 plugin DLLs (.dll) for real-time audio processing. Plugins process audio in the chain order below.</p>
-        <div id="vstPluginList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
-        <div class="plugin-actions">
-          <button class="mini-btn" onclick="vstAddPlugin()">Add VST Plugin</button>
-          <button class="mini-btn" onclick="vstRefreshList()">Refresh</button>
-        </div>
-      </div>
-
-      <div style="margin-top:20px">
-        <div class="eq-section-title">VST Plugin Parameters</div>
-        <div id="vstParamPanel" style="font-size:11px;color:var(--text-muted);padding:4px 0">Select a plugin to view its parameters</div>
-      </div>
-    </div>
-
-    <!-- Virtual Camera Tab -->
-    <div class="tab-content" id="tab-obs">
-      <div class="eq-section-title" style="margin-bottom:12px">Custom Mic Virtual Camera</div>
-      <p style="font-size:11px;color:var(--text-muted);margin:0 0 16px">Manage video sources for your virtual camera output. Add video files or use your webcam, then start the virtual camera to use in Discord, Zoom, or any app.</p>
-
-      <!-- Preview -->
-      <div class="eq-fx-section" style="margin-bottom:14px">
-        <div class="eq-section-title">Preview</div>
-        <div style="position:relative;background:#000;border:1px solid var(--glass-border);border-radius:var(--radius-md);overflow:hidden;aspect-ratio:16/9;max-height:360px">
-          <video id="obsPreview" style="width:100%;height:100%;object-fit:contain" autoplay muted playsinline></video>
-          <div id="obsPreviewEmpty" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:12px;pointer-events:none">No source selected</div>
-        </div>
-        <div style="display:flex;gap:6px;align-items:center;margin-top:10px">
-          <button class="mic-btn start" id="obsVcamBtn" onclick="obsToggleVcam()">Start Virtual Camera</button>
-          <span style="font-size:11px;color:var(--text-muted)" id="obsVcamStatus">Not active</span>
-        </div>
-        <p style="font-size:10px;color:var(--text-muted);margin-top:6px">Uses the built-in Custom Mic Virtual Camera. Select "Custom Mic Virtual Camera" in Discord/Zoom after starting it here.</p>
-      </div>
-
-      <!-- Webcam Source -->
-      <div class="eq-fx-section" style="margin-bottom:14px">
-        <div class="eq-fx-header">
-          <span>Webcam Source</span>
-          <button class="eq-fx-toggle" id="obsWebcamToggle" onclick="obsToggleWebcam()"></button>
-        </div>
-        <div class="output-select" style="margin-top:8px">
-          <label>Camera Device:</label>
-          <select id="obsCameraSelect" onchange="obsSwitchCamera()"></select>
-        </div>
-        <button class="mini-btn" onclick="obsRefreshCameras()" style="margin-top:6px;width:auto;padding:0 12px">Refresh Cameras</button>
-      </div>
-
-      <!-- Video Sources -->
-      <div class="eq-fx-section" style="margin-bottom:14px">
-        <div class="eq-section-title">Video Sources</div>
-        <div class="soundpad-grid" id="obsSourceList" style="max-height:240px"></div>
-        <div class="soundpad-empty" id="obsSourceEmpty">No video sources added yet</div>
-        <button class="soundpad-add" onclick="obsAddVideo()">+ Add Video Files</button>
-      </div>
-
-      <!-- Playback Controls -->
-      <div class="eq-fx-section">
-        <div class="eq-section-title">Playback Controls</div>
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-          <button class="top-transport" id="obsPlayBtn" onclick="obsTogglePlay()" title="Play / Pause">&#9654;</button>
-          <button class="top-transport" onclick="obsStop()" title="Stop">&#9632;</button>
-          <div style="flex:1;display:flex;align-items:center;gap:8px">
-            <span style="font-size:11px;color:var(--text-muted)" id="obsCurrentTime">0:00</span>
-            <input type="range" id="obsSeekBar" min="0" max="1000" value="0" style="flex:1;accent-color:var(--brand)" oninput="obsSeekPreview(this.value)" onchange="obsSeekTo(this.value)">
-            <span style="font-size:11px;color:var(--text-muted)" id="obsDuration">0:00</span>
+        <div>
+          <div class="eq-section-title">Plugin Sets</div>
+          <div class="plugin-library" id="pluginLibrary"></div>
+          <div class="plugin-actions">
+            <button class="mini-btn" onclick="importPluginSets()">Import</button>
+            <button class="mini-btn" onclick="applyActivePluginSet()">Apply</button>
           </div>
         </div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <div class="eq-fx-slider" style="flex:1">
-            <label>Volume:</label>
-            <input type="range" id="obsVolume" min="0" max="100" value="100" oninput="obsSetVolume(this.value)" style="flex:1">
+
+        <div style="margin-top:20px">
+          <div class="eq-section-title">APO Config Files</div>
+          <div class="plugin-library" id="apoConfigLibrary"></div>
+          <div class="plugin-actions">
+            <button class="mini-btn" onclick="importPluginSets()">Import APO Config</button>
+            <button class="mini-btn" onclick="exportApoConfig()">Export</button>
           </div>
-          <div class="monitor-row" style="margin:0;padding:4px 10px">
-            <label style="font-size:11px" for="obsLoopToggle">Loop</label>
-            <button class="eq-fx-toggle" id="obsLoopToggle" onclick="obsToggleLoop()"></button>
+        </div>
+
+        <div style="margin-top:20px">
+          <div class="eq-section-title">VST2 Plugins <span id="vstStatus" style="float:right;font-size:10px;font-weight:400;color:var(--text-muted)"></span></div>
+          <p style="font-size:11px;color:var(--text-muted);margin:4px 0 8px">Load VST2 plugin DLLs (.dll) for real-time audio processing. Plugins process audio in the chain order below.</p>
+          <div id="vstPluginList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
+          <div class="plugin-actions">
+            <button class="mini-btn" onclick="vstAddPlugin()">Add VST Plugin</button>
+            <button class="mini-btn" onclick="vstRefreshList()">Refresh</button>
           </div>
+        </div>
+
+        <div style="margin-top:20px">
+          <div class="eq-section-title">VST Plugin Parameters</div>
+          <div id="vstParamPanel" style="font-size:11px;color:var(--text-muted);padding:4px 0">Select a plugin to view its parameters</div>
         </div>
       </div>
     </div>
 
-    <!-- Screen Recorder Tab -->
-    <div class="tab-content" id="tab-recorder">
 
-      <!-- Recording Controls -->
-      <div class="eq-fx-section" style="margin-bottom:14px">
-        <div class="eq-section-title">Recording Controls</div>
-        <div class="recorder-controls">
-          <button class="recorder-record-btn" id="recBtnMain" onclick="recToggleRecord()" title="Record">&#9679;</button>
-          <button class="mini-btn" id="recPauseBtn" onclick="recTogglePause()" title="Pause" disabled>&#10074;&#10074;</button>
-          <button class="mini-btn" id="recStopBtn" onclick="recStop()" title="Stop" disabled>&#9632;</button>
-          <button class="mini-btn" onclick="recScreenshot()" title="Screenshot">&#128247;</button>
-        </div>
-        <div style="text-align:center">
-          <span class="recorder-timer" id="recTimer">00:00:00</span>
-        </div>
-      </div>
-
-      <!-- Preview -->
-      <div class="eq-fx-section" style="margin-bottom:14px">
-        <div class="eq-section-title">Preview</div>
-        <div class="recorder-preview-container">
-          <video id="recPreview" autoplay muted></video>
-          <div class="recorder-status-overlay">
-            <div class="recorder-status-dot" id="recStatusDot"></div>
-            <span id="recStatusText">Idle</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Source Selection -->
-      <div class="eq-fx-section" style="margin-bottom:14px">
-        <div class="eq-fx-header">
-          <div class="eq-section-title">Source</div>
-          <button class="mini-btn" onclick="recRefreshSources()" title="Refresh">&#8635;</button>
-        </div>
-        <div class="eq-fx-slider" style="margin-bottom:8px">
-          <label>Type:</label>
-          <select id="recSourceType" onchange="recRefreshSources()" style="flex:1;background:var(--input-bg);border:1px solid var(--glass-border);border-radius:var(--radius-sm);color:var(--text);padding:4px 8px;font-size:12px">
-            <option value="screen">Screen</option>
-            <option value="window">Window</option>
-          </select>
-        </div>
-        <div class="recorder-source-grid" id="recSourceGrid"></div>
-      </div>
-
-      <!-- Recording Settings -->
-      <div class="eq-fx-section" style="margin-bottom:14px">
-        <div class="eq-section-title">Settings</div>
-
-        <div class="eq-fx-slider"><label>Resolution:</label>
-          <select id="recResolution" style="flex:1;background:var(--input-bg);border:1px solid var(--glass-border);border-radius:var(--radius-sm);color:var(--text);padding:4px 8px;font-size:12px">
-            <option value="source">Source Size</option>
-            <option value="1920x1080" selected>1920 x 1080</option>
-            <option value="2560x1440">2560 x 1440</option>
-            <option value="3840x2160">3840 x 2160</option>
-            <option value="1280x720">1280 x 720</option>
-          </select>
-        </div>
-
-        <div class="eq-fx-slider"><label>Frame Rate:</label>
-          <select id="recFps" style="flex:1;background:var(--input-bg);border:1px solid var(--glass-border);border-radius:var(--radius-sm);color:var(--text);padding:4px 8px;font-size:12px">
-            <option value="24">24 fps</option>
-            <option value="30" selected>30 fps</option>
-            <option value="60">60 fps</option>
-          </select>
-        </div>
-
-        <div class="eq-fx-slider"><label>Bitrate:</label>
-          <input type="range" id="recBitrate" min="1" max="50" value="8" oninput="document.getElementById('recBitrateVal').textContent=this.value" style="flex:1">
-          <span id="recBitrateVal" style="min-width:30px;text-align:right;font-size:11px;color:var(--text-muted)">8</span><span style="font-size:11px;color:var(--text-muted)">Mbps</span>
-        </div>
-
-        <div class="eq-fx-slider"><label>Format:</label>
-          <select id="recFormat" style="flex:1;background:var(--input-bg);border:1px solid var(--glass-border);border-radius:var(--radius-sm);color:var(--text);padding:4px 8px;font-size:12px">
-            <option value="webm" selected>WebM</option>
-            <option value="mp4">MP4</option>
-            <option value="mkv">MKV</option>
-          </select>
-        </div>
-
-        <div class="eq-fx-slider"><label>Codec:</label>
-          <select id="recCodec" style="flex:1;background:var(--input-bg);border:1px solid var(--glass-border);border-radius:var(--radius-sm);color:var(--text);padding:4px 8px;font-size:12px">
-            <option value="vp9" selected>VP9</option>
-            <option value="vp8">VP8</option>
-            <option value="h264">H.264</option>
-          </select>
-        </div>
-
-        <div class="eq-fx-slider"><label>Audio:</label>
-          <select id="recAudioSource" style="flex:1;background:var(--input-bg);border:1px solid var(--glass-border);border-radius:var(--radius-sm);color:var(--text);padding:4px 8px;font-size:12px">
-            <option value="system" selected>System Audio</option>
-            <option value="mic">Microphone</option>
-            <option value="both">Both</option>
-            <option value="none">None</option>
-          </select>
-        </div>
-
-        <div class="eq-fx-slider"><label>Audio Bitrate:</label>
-          <select id="recAudioBitrate" style="flex:1;background:var(--input-bg);border:1px solid var(--glass-border);border-radius:var(--radius-sm);color:var(--text);padding:4px 8px;font-size:12px">
-            <option value="128">128 kbps</option>
-            <option value="192" selected>192 kbps</option>
-            <option value="256">256 kbps</option>
-            <option value="320">320 kbps</option>
-          </select>
-        </div>
-
-        <div class="eq-fx-slider">
-          <label>Output Folder:</label>
-          <input type="text" id="recOutputDir" readonly style="flex:1;background:var(--input-bg);border:1px solid var(--glass-border);border-radius:var(--radius-sm);color:var(--text);padding:4px 8px;font-size:12px" placeholder="Select folder...">
-          <button class="mini-btn" onclick="recSelectOutputDir()">Browse</button>
-        </div>
-
-        <div class="eq-fx-slider">
-          <label>Filename:</label>
-          <input type="text" id="recFilenamePattern" value="recording_{date}_{time}" style="flex:1;background:var(--input-bg);border:1px solid var(--glass-border);border-radius:var(--radius-sm);color:var(--text);padding:4px 8px;font-size:12px">
-        </div>
-        <div style="font-size:9px;color:var(--text-muted);margin-top:2px">Tokens: {date}, {time}, {n}</div>
-
-        <div class="monitor-row" style="margin-top:8px">
-          <label style="font-size:11px">Capture Cursor</label>
-          <button class="eq-fx-toggle active" id="recCursorToggle" onclick="this.classList.toggle('active')"></button>
-        </div>
-
-        <div class="monitor-row">
-          <label style="font-size:11px">Countdown Timer</label>
-          <button class="eq-fx-toggle" id="recCountdownToggle" onclick="this.classList.toggle('active')"></button>
-          <select id="recCountdownSec" style="width:60px;background:var(--input-bg);border:1px solid var(--glass-border);border-radius:var(--radius-sm);color:var(--text);padding:2px 6px;font-size:11px;margin-left:6px">
-            <option value="3" selected>3s</option>
-            <option value="5">5s</option>
-            <option value="10">10s</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- Last Recording -->
-      <div class="eq-fx-section" style="margin-bottom:14px">
-        <div class="eq-section-title">Last Recording</div>
-        <div id="recLastInfo" style="font-size:11px;color:var(--text-muted);margin-bottom:6px">No recordings yet</div>
-        <div style="display:flex;gap:6px">
-          <button class="mini-btn" id="recOpenFile" onclick="recOpenLastFile()" disabled>Open File</button>
-          <button class="mini-btn" id="recOpenFolder" onclick="recOpenLastFolder()" disabled>Open Folder</button>
-        </div>
-      </div>
-
-      <!-- Hotkeys -->
-      <div class="eq-fx-section">
-        <div class="eq-section-title">Hotkeys</div>
-        <div class="monitor-row"><label style="font-size:11px;min-width:90px">Start / Stop</label><input class="recorder-hotkey-input" id="recHkRecord" readonly onclick="recCaptureHotkey(this)" placeholder="Click to set" value=""></div>
-        <div class="monitor-row"><label style="font-size:11px;min-width:90px">Pause / Resume</label><input class="recorder-hotkey-input" id="recHkPause" readonly onclick="recCaptureHotkey(this)" placeholder="Click to set" value=""></div>
-        <div class="monitor-row"><label style="font-size:11px;min-width:90px">Screenshot</label><input class="recorder-hotkey-input" id="recHkScreenshot" readonly onclick="recCaptureHotkey(this)" placeholder="Click to set" value=""></div>
-      </div>
-
-    </div>
-
-    <div class="tab-content" id="tab-voicemod">
-      <div class="ai-voice-shell">
-        <div class="ai-voice-hero">
-          <div class="ai-voice-logo">AI</div>
-          <div>
-            <div class="ai-voice-kicker">Realtime CUDA voice conversion</div>
-            <h1>AI Voice Changer</h1>
-            <p>Use your RVC/MMVC models with GPU inference, low-latency controls, pitch tuning, voice slots and audio routing in one workspace.</p>
-          </div>
-          <div class="ai-voice-status" id="aivoiceStatus"><span class="ai-voice-status-dot"></span><span id="aivoiceStatusText">Engine offline</span></div>
-        </div>
-
-        <div class="ai-voice-toolbar">
-          <button class="mini-btn primary" id="aivoiceStartBtn" onclick="aivoiceToggleBackend()">Start AI Engine</button>
-          <button class="mini-btn" onclick="aivoiceSelectFolder()">Choose folder</button>
-          <button class="mini-btn" onclick="aivoiceRefreshClient()">Sync engine</button>
-          <button class="mini-btn" onclick="aivoiceOpenFolder()">Open files</button>
-          <span class="ai-voice-folder" id="aivoiceFolderPath">C:\Users\xurco\Desktop\Voice changer</span>
-        </div>
-
-        <div class="ai-voice-layout">
-          <section class="ai-voice-client-card">
-            <div class="ai-voice-card-head"><h3>Voice Changer Client</h3><span>Local only · 127.0.0.1:18888</span></div>
-            <div class="ai-voice-selected"><strong id="aivoiceSelectedModel">No model selected</strong><span id="aivoiceSelectedModelInfo">Start the engine to load your RVC/MMVC model slots.</span></div>
-            <div class="ai-voice-model-strip" id="aivoiceModelGrid"><div class="ai-voice-placeholder" style="height:100px;grid-column:1/-1">Start the AI engine to load model slots.</div></div>
-            <div class="ai-voice-control-grid">
-              <div class="ai-voice-control"><label>Input gain <output id="aivoiceInGainValue">1.00</output></label><input id="aivoiceInGain" type="range" min="0" max="2" step="0.01" value="1"></div>
-              <div class="ai-voice-control"><label>Output gain <output id="aivoiceOutGainValue">1.00</output></label><input id="aivoiceOutGain" type="range" min="0" max="2" step="0.01" value="1"></div>
-              <div class="ai-voice-control"><label>Pitch / tune <output id="aivoiceTuneValue">0</output></label><input id="aivoiceTune" type="range" min="-24" max="24" step="1" value="0"></div>
-              <div class="ai-voice-control"><label>Index mix <output id="aivoiceIndexValue">0.00</output></label><input id="aivoiceIndex" type="range" min="0" max="1" step="0.01" value="0"></div>
-              <div class="ai-voice-control"><label>F0 detector</label><select id="aivoiceF0"><option value="rmvpe_onnx">RMVPE ONNX</option><option value="rmvpe">RMVPE</option><option value="crepe">Crepe</option><option value="crepe_full">Crepe Full</option><option value="harvest">Harvest</option><option value="dio">DIO</option></select></div>
-              <div class="ai-voice-control"><label>GPU</label><select id="aivoiceGpu"><option value="0">GPU 0</option><option value="-1">CPU</option></select></div>
-              <div class="ai-voice-control"><label>Chunk size</label><select id="aivoiceChunk"><option value="1">1 - 2.7 ms</option><option value="8">8 - 21.3 ms</option><option value="32">32 - 85.3 ms</option><option value="64">64 - 170.7 ms</option><option value="128">128 - 341.3 ms</option><option value="192" selected>192 - 512 ms</option><option value="256">256 - 682.7 ms</option></select></div>
-              <div class="ai-voice-control"><label>Extra conversion</label><select id="aivoiceExtra"><option value="0">0</option><option value="4096">4096</option><option value="8192" selected>8192</option><option value="16384">16384</option><option value="32768">32768</option></select></div>
-              <div class="ai-voice-control full"><label>Noise threshold <output id="aivoiceSilenceValue">0.00001</output></label><input id="aivoiceSilence" type="range" min="0" max="0.01" step="0.00001" value="0.00001"></div>
-              <div class="ai-voice-control full"><div class="ai-voice-checks"><label><input id="aivoiceEcho" type="checkbox"> Echo cancellation</label><label><input id="aivoiceSup1" type="checkbox"> Noise suppression</label><label><input id="aivoiceSup2" type="checkbox"> Enhanced suppression</label><label><input id="aivoicePass" type="checkbox"> Pass through</label></div></div>
-            </div>
-            <div class="ai-voice-action-row"><button class="mini-btn primary" id="aivoiceConvertBtn" onclick="aivoiceToggleConversion()">Start conversion</button><button class="mini-btn" onclick="aivoiceFetchInfo()">Sync settings</button><span id="aivoiceConversionStatus" style="font-size:10px;color:var(--text-muted)">Conversion stopped</span></div>
-            <div class="ai-voice-device-grid"><div><label>Microphone input</label><select id="aivoiceInput"></select></div><div><label>Converted output</label><select id="aivoiceOutput"></select></div><div><label>Monitor output</label><select id="aivoiceMonitor"></select></div></div>
-            <div class="ai-voice-analyzer"><div class="ai-voice-meter"><label>Buffer</label><strong id="aivoiceBufStat">0 ms</strong></div><div class="ai-voice-meter"><label>Result</label><strong id="aivoiceResStat">0 ms</strong></div><div class="ai-voice-meter"><label>RTF</label><strong id="aivoiceRtfStat">0.00</strong></div><div class="ai-voice-meter"><label>Queue</label><strong id="aivoiceQueueStat">0</strong></div></div>
-            <div id="aivoiceError" class="ai-voice-error"></div>
-          </section>
-
-          <aside class="ai-voice-side">
-            <section class="ai-voice-side-card">
-              <div class="ai-voice-card-head"><h3>Engine</h3><span>CUDA backend</span></div>
-              <div class="ai-voice-stat-list">
-                <div class="ai-voice-stat"><label>Status</label><strong id="aivoiceEngineValue">Offline</strong></div>
-                <div class="ai-voice-stat"><label>Port</label><strong>18888</strong></div>
-                <div class="ai-voice-stat"><label>Runtime</label><strong>MMVCServerSIO</strong></div>
-                <div class="ai-voice-stat"><label>Models</label><strong>RVC / MMVC</strong></div>
-              </div>
-            </section>
-            <section class="ai-voice-side-card">
-              <div class="ai-voice-card-head"><h3>Quick setup</h3><span>Recommended</span></div>
-              <p class="ai-voice-tip"><strong>Balanced:</strong> start with CHUNK 192 and EXTRA 8192. Lower CHUNK for less delay; raise it if the converted voice stutters.</p>
-              <p class="ai-voice-tip" style="margin-top:8px"><strong>Discord route:</strong> choose your real mic as input and VB-CABLE Input as output, then select CABLE Output in Discord.</p>
-            </section>
-          </aside>
-        </div>
-
-        <div class="ai-voice-feature-grid">
-          <div class="ai-voice-feature"><b>GPU accelerated</b><span>Uses the CUDA ONNX/PyTorch runtime already in your voice-changer folder.</span></div>
-          <div class="ai-voice-feature"><b>Saved model slots</b><span>Keep your existing voice models, thumbnails, indexes and settings available.</span></div>
-          <div class="ai-voice-feature"><b>Low-latency routing</b><span>Use the client’s device controls and virtual cable without changing the EQ tab.</span></div>
-        </div>
-      </div>
-      <div class="vm-master-toggle">
-        <label style="font-size:11px;font-weight:600;color:var(--header)">Voice Changer</label>
-        <input type="checkbox" id="vmMasterToggle" onchange="voicemodToggle()">
-        <label style="font-size:10px;color:var(--text-muted)">Apply:</label>
-        <select style="font-size:10px;background:var(--input-bg);color:var(--text);border:1px solid var(--glass-border);border-radius:var(--radius-sm);padding:2px 6px" onchange="voicemodState.applyMode=this.value">
-          <option value="mic">Mic Only</option>
-          <option value="all">Everything</option>
-        </select>
-        <label style="font-size:10px;color:var(--text-muted)">Noise Suppression:</label>
-        <input type="checkbox" onchange="voicemodState.noiseSuppression=this.checked">
-        <input type="range" min="-100" max="0" value="-50" style="width:80px" oninput="voicemodState.noiseThreshold=this.value">
-      </div>
-      <div class="eq-section-title">Voice Presets</div>
-      <div class="voicemod-grid">
-        <div class="voicemod-card" data-preset="Clean" onclick="voicemodApplyPreset('Clean')" style="border-color:rgba(52,211,153,.3);background:rgba(52,211,153,.06)"><div class="vm-icon">✨</div><div class="vm-name">Clean</div><div class="vm-desc">Reset to normal</div><button class="vm-hotkey-btn" data-preset="Clean" onclick="event.stopPropagation();voicemodBindHotkey('Clean')">Bind</button></div>
-        <div class="voicemod-card" data-preset="Baby" onclick="voicemodApplyPreset('Baby')"><div class="vm-icon">👶</div><div class="vm-name">Baby</div><div class="vm-desc">High pitch child</div><button class="vm-hotkey-btn" data-preset="Baby" onclick="event.stopPropagation();voicemodBindHotkey('Baby')">Bind</button></div>
-        <div class="voicemod-card" data-preset="Deep" onclick="voicemodApplyPreset('Deep')"><div class="vm-icon">🔊</div><div class="vm-name">Deep</div><div class="vm-desc">Low bass voice</div><button class="vm-hotkey-btn" data-preset="Deep" onclick="event.stopPropagation();voicemodBindHotkey('Deep')">Bind</button></div>
-        <div class="voicemod-card" data-preset="Robot" onclick="voicemodApplyPreset('Robot')"><div class="vm-icon">🤖</div><div class="vm-name">Robot</div><div class="vm-desc">Mechanical tone</div><button class="vm-hotkey-btn" data-preset="Robot" onclick="event.stopPropagation();voicemodBindHotkey('Robot')">Bind</button></div>
-        <div class="voicemod-card" data-preset="Demon" onclick="voicemodApplyPreset('Demon')"><div class="vm-icon">👹</div><div class="vm-name">Demon</div><div class="vm-desc">Dark demonic</div><button class="vm-hotkey-btn" data-preset="Demon" onclick="event.stopPropagation();voicemodBindHotkey('Demon')">Bind</button></div>
-        <div class="voicemod-card" data-preset="Chipmunk" onclick="voicemodApplyPreset('Chipmunk')"><div class="vm-icon">🐿️</div><div class="vm-name">Chipmunk</div><div class="vm-desc">Squeaky high</div><button class="vm-hotkey-btn" data-preset="Chipmunk" onclick="event.stopPropagation();voicemodBindHotkey('Chipmunk')">Bind</button></div>
-        <div class="voicemod-card" data-preset="Ghost" onclick="voicemodApplyPreset('Ghost')"><div class="vm-icon">👻</div><div class="vm-name">Ghost</div><div class="vm-desc">Ethereal whisper</div><button class="vm-hotkey-btn" data-preset="Ghost" onclick="event.stopPropagation();voicemodBindHotkey('Ghost')">Bind</button></div>
-        <div class="voicemod-card" data-preset="Alien" onclick="voicemodApplyPreset('Alien')"><div class="vm-icon">👽</div><div class="vm-name">Alien</div><div class="vm-desc">Otherworldly</div><button class="vm-hotkey-btn" data-preset="Alien" onclick="event.stopPropagation();voicemodBindHotkey('Alien')">Bind</button></div>
-        <div class="voicemod-card" data-preset="Megaphone" onclick="voicemodApplyPreset('Megaphone')"><div class="vm-icon">📢</div><div class="vm-name">Megaphone</div><div class="vm-desc">Loud speaker</div><button class="vm-hotkey-btn" data-preset="Megaphone" onclick="event.stopPropagation();voicemodBindHotkey('Megaphone')">Bind</button></div>
-        <div class="voicemod-card" data-preset="Cave" onclick="voicemodApplyPreset('Cave')"><div class="vm-icon">🦇</div><div class="vm-name">Cave</div><div class="vm-desc">Deep cavern echo</div><button class="vm-hotkey-btn" data-preset="Cave" onclick="event.stopPropagation();voicemodBindHotkey('Cave')">Bind</button></div>
-        <div class="voicemod-card" data-preset="Telephone" onclick="voicemodApplyPreset('Telephone')"><div class="vm-icon">☎️</div><div class="vm-name">Telephone</div><div class="vm-desc">Old phone line</div><button class="vm-hotkey-btn" data-preset="Telephone" onclick="event.stopPropagation();voicemodBindHotkey('Telephone')">Bind</button></div>
-        <div class="voicemod-card" data-preset="Underwater" onclick="voicemodApplyPreset('Underwater')"><div class="vm-icon">🫧</div><div class="vm-name">Underwater</div><div class="vm-desc">Submerged sound</div><button class="vm-hotkey-btn" data-preset="Underwater" onclick="event.stopPropagation();voicemodBindHotkey('Underwater')">Bind</button></div>
-        <div class="voicemod-card" data-preset="Radio" onclick="voicemodApplyPreset('Radio')"><div class="vm-icon">📻</div><div class="vm-name">Radio</div><div class="vm-desc">AM broadcast</div><button class="vm-hotkey-btn" data-preset="Radio" onclick="event.stopPropagation();voicemodBindHotkey('Radio')">Bind</button></div>
-        <div class="voicemod-card" data-preset="Helium" onclick="voicemodApplyPreset('Helium')"><div class="vm-icon">🎈</div><div class="vm-name">Helium</div><div class="vm-desc">Balloon inhale</div><button class="vm-hotkey-btn" data-preset="Helium" onclick="event.stopPropagation();voicemodBindHotkey('Helium')">Bind</button></div>
-        <div class="voicemod-card" data-preset="Giant" onclick="voicemodApplyPreset('Giant')"><div class="vm-icon">🦕</div><div class="vm-name">Giant</div><div class="vm-desc">Massive rumble</div><button class="vm-hotkey-btn" data-preset="Giant" onclick="event.stopPropagation();voicemodBindHotkey('Giant')">Bind</button></div>
-        <div class="voicemod-card" data-preset="Whisperer" onclick="voicemodApplyPreset('Whisperer')"><div class="vm-icon">🤫</div><div class="vm-name">Whisperer</div><div class="vm-desc">Soft whisper</div><button class="vm-hotkey-btn" data-preset="Whisperer" onclick="event.stopPropagation();voicemodBindHotkey('Whisperer')">Bind</button></div>
-        <div class="voicemod-card" data-preset="Echo" onclick="voicemodApplyPreset('Echo')"><div class="vm-icon">🔁</div><div class="vm-name">Echo</div><div class="vm-desc">Repeating delay</div><button class="vm-hotkey-btn" data-preset="Echo" onclick="event.stopPropagation();voicemodBindHotkey('Echo')">Bind</button></div>
-        <div class="voicemod-card" data-preset="Metallic" onclick="voicemodApplyPreset('Metallic')"><div class="vm-icon">⚙️</div><div class="vm-name">Metallic</div><div class="vm-desc">Metal resonance</div><button class="vm-hotkey-btn" data-preset="Metallic" onclick="event.stopPropagation();voicemodBindHotkey('Metallic')">Bind</button></div>
-        <div class="voicemod-card" data-preset="Stadium" onclick="voicemodApplyPreset('Stadium')"><div class="vm-icon">🏟️</div><div class="vm-name">Stadium</div><div class="vm-desc">Arena reverb</div><button class="vm-hotkey-btn" data-preset="Stadium" onclick="event.stopPropagation();voicemodBindHotkey('Stadium')">Bind</button></div>
-        <div class="voicemod-card" data-preset="Darth Vader" onclick="voicemodApplyPreset('Darth Vader')"><div class="vm-icon">⚔️</div><div class="vm-name">Darth Vader</div><div class="vm-desc">Dark lord breath</div><button class="vm-hotkey-btn" data-preset="Darth Vader" onclick="event.stopPropagation();voicemodBindHotkey('Darth Vader')">Bind</button></div>
-        <div class="voicemod-card" data-preset="Anime" onclick="voicemodApplyPreset('Anime')"><div class="vm-icon">✨</div><div class="vm-name">Anime</div><div class="vm-desc">Kawaii voice</div><button class="vm-hotkey-btn" data-preset="Anime" onclick="event.stopPropagation();voicemodBindHotkey('Anime')">Bind</button></div>
-        <div class="voicemod-card" data-preset="Old Radio" onclick="voicemodApplyPreset('Old Radio')"><div class="vm-icon">📟</div><div class="vm-name">Old Radio</div><div class="vm-desc">Vintage crackle</div><button class="vm-hotkey-btn" data-preset="Old Radio" onclick="event.stopPropagation();voicemodBindHotkey('Old Radio')">Bind</button></div>
-        <div class="voicemod-card" data-preset="Storyteller" onclick="voicemodApplyPreset('Storyteller')"><div class="vm-icon">📖</div><div class="vm-name">Storyteller</div><div class="vm-desc">Warm narrator</div><button class="vm-hotkey-btn" data-preset="Storyteller" onclick="event.stopPropagation();voicemodBindHotkey('Storyteller')">Bind</button></div>
-        <div class="voicemod-card" data-preset="Horror" onclick="voicemodApplyPreset('Horror')"><div class="vm-icon">🩸</div><div class="vm-name">Horror</div><div class="vm-desc">Creepy distorted</div><button class="vm-hotkey-btn" data-preset="Horror" onclick="event.stopPropagation();voicemodBindHotkey('Horror')">Bind</button></div>
-        <div class="voicemod-card" data-preset="Glitch" onclick="voicemodApplyPreset('Glitch')"><div class="vm-icon">🔀</div><div class="vm-name">Glitch</div><div class="vm-desc">Digital artifacts</div><button class="vm-hotkey-btn" data-preset="Glitch" onclick="event.stopPropagation();voicemodBindHotkey('Glitch')">Bind</button></div>
-      </div>
-      <div class="voicemod-custom">
-        <div class="eq-section-title">Custom Voice Builder</div>
-        <div class="eq-fx-section"><div class="eq-fx-header">Pitch &amp; Formant</div><div class="eq-fx-slider"><label>Pitch</label><input type="range" id="vmPitch" min="-24" max="24" value="0" oninput="voicemodApplyCustom();this.nextElementSibling.textContent=this.value"><span class="range-val">0</span></div><div class="eq-fx-slider"><label>Formant</label><input type="range" id="vmFormant" min="-12" max="12" value="0" oninput="voicemodApplyCustom();this.nextElementSibling.textContent=this.value"><span class="range-val">0</span></div></div>
-        <div class="eq-fx-section"><div class="eq-fx-header">Reverb</div><div class="eq-fx-slider"><label>Dry/Wet</label><input type="range" id="vmReverbMix" min="0" max="100" value="0" oninput="voicemodApplyCustom();this.nextElementSibling.textContent=this.value"><span class="range-val">0</span></div><div class="eq-fx-slider"><label>Room Size</label><input type="range" id="vmReverbSize" min="0" max="100" value="50" oninput="voicemodApplyCustom();this.nextElementSibling.textContent=this.value"><span class="range-val">50</span></div><div class="eq-fx-slider"><label>Damping</label><input type="range" id="vmReverbDamp" min="0" max="100" value="50" oninput="voicemodApplyCustom();this.nextElementSibling.textContent=this.value"><span class="range-val">50</span></div></div>
-        <div class="eq-fx-section"><div class="eq-fx-header">Echo / Delay</div><div class="eq-fx-slider"><label>Time (ms)</label><input type="range" id="vmDelayTime" min="0" max="1000" value="0" oninput="voicemodApplyCustom();this.nextElementSibling.textContent=this.value"><span class="range-val">0</span></div><div class="eq-fx-slider"><label>Feedback</label><input type="range" id="vmDelayFeedback" min="0" max="95" value="0" oninput="voicemodApplyCustom();this.nextElementSibling.textContent=this.value"><span class="range-val">0</span></div><div class="eq-fx-slider"><label>Mix</label><input type="range" id="vmDelayMix" min="0" max="100" value="0" oninput="voicemodApplyCustom();this.nextElementSibling.textContent=this.value"><span class="range-val">0</span></div></div>
-        <div class="eq-fx-section"><div class="eq-fx-header">Distortion</div><div class="eq-fx-slider"><label>Amount</label><input type="range" id="vmDistAmount" min="0" max="100" value="0" oninput="voicemodApplyCustom();this.nextElementSibling.textContent=this.value"><span class="range-val">0</span></div><div class="eq-fx-slider"><label>Mix</label><input type="range" id="vmDistMix" min="0" max="100" value="0" oninput="voicemodApplyCustom();this.nextElementSibling.textContent=this.value"><span class="range-val">0</span></div></div>
-        <div class="eq-fx-section"><div class="eq-fx-header">Compressor</div><div class="eq-fx-slider"><label>Threshold</label><input type="range" id="vmCompThreshold" min="-60" max="0" value="-24" oninput="voicemodApplyCustom();this.nextElementSibling.textContent=this.value"><span class="range-val">-24</span></div><div class="eq-fx-slider"><label>Ratio</label><input type="range" id="vmCompRatio" min="1" max="20" value="4" oninput="voicemodApplyCustom();this.nextElementSibling.textContent=this.value"><span class="range-val">4</span></div></div>
-        <div class="eq-fx-section"><div class="eq-fx-header">Noise Gate</div><div class="eq-fx-slider"><label>Threshold</label><input type="range" id="vmGateThreshold" min="-100" max="0" value="-50" oninput="voicemodApplyCustom();this.nextElementSibling.textContent=this.value"><span class="range-val">-50</span></div><div class="eq-fx-slider"><label>Floor</label><input type="range" id="vmGateFloor" min="-100" max="-20" value="-80" oninput="voicemodApplyCustom();this.nextElementSibling.textContent=this.value"><span class="range-val">-80</span></div></div>
-        <div class="eq-fx-section"><div class="eq-fx-header">EQ (3-Band)</div><div class="eq-fx-slider"><label>Low Gain</label><input type="range" id="vmEqLow" min="-12" max="12" value="0" oninput="voicemodApplyCustom();this.nextElementSibling.textContent=this.value"><span class="range-val">0</span></div><div class="eq-fx-slider"><label>Mid Gain</label><input type="range" id="vmEqMid" min="-12" max="12" value="0" oninput="voicemodApplyCustom();this.nextElementSibling.textContent=this.value"><span class="range-val">0</span></div><div class="eq-fx-slider"><label>High Gain</label><input type="range" id="vmEqHigh" min="-12" max="12" value="0" oninput="voicemodApplyCustom();this.nextElementSibling.textContent=this.value"><span class="range-val">0</span></div></div>
-        <div class="eq-fx-section"><div class="eq-fx-header">Tremolo</div><div class="eq-fx-slider"><label>Speed (Hz)</label><input type="range" id="vmTremSpeed" min="0.1" max="20" step="0.1" value="5" oninput="voicemodApplyCustom();this.nextElementSibling.textContent=this.value"><span class="range-val">5</span></div><div class="eq-fx-slider"><label>Depth</label><input type="range" id="vmTremDepth" min="0" max="100" value="0" oninput="voicemodApplyCustom();this.nextElementSibling.textContent=this.value"><span class="range-val">0</span></div></div>
-        <div class="eq-fx-section"><div class="eq-fx-header">Chorus</div><div class="eq-fx-slider"><label>Rate</label><input type="range" id="vmChorusRate" min="0.1" max="10" step="0.1" value="1" oninput="voicemodApplyCustom();this.nextElementSibling.textContent=this.value"><span class="range-val">1</span></div><div class="eq-fx-slider"><label>Depth</label><input type="range" id="vmChorusDepth" min="0" max="100" value="0" oninput="voicemodApplyCustom();this.nextElementSibling.textContent=this.value"><span class="range-val">0</span></div><div class="eq-fx-slider"><label>Mix</label><input type="range" id="vmChorusMix" min="0" max="100" value="0" oninput="voicemodApplyCustom();this.nextElementSibling.textContent=this.value"><span class="range-val">0</span></div></div>
-        <div class="eq-fx-section"><div class="eq-fx-header">Flanger</div><div class="eq-fx-slider"><label>Rate</label><input type="range" id="vmFlangerRate" min="0.1" max="10" step="0.1" value="1" oninput="voicemodApplyCustom();this.nextElementSibling.textContent=this.value"><span class="range-val">1</span></div><div class="eq-fx-slider"><label>Depth</label><input type="range" id="vmFlangerDepth" min="0" max="100" value="0" oninput="voicemodApplyCustom();this.nextElementSibling.textContent=this.value"><span class="range-val">0</span></div><div class="eq-fx-slider"><label>Feedback</label><input type="range" id="vmFlangerFeedback" min="0" max="95" value="0" oninput="voicemodApplyCustom();this.nextElementSibling.textContent=this.value"><span class="range-val">0</span></div></div>
-        <div class="eq-fx-section"><div class="eq-fx-header">Bitcrusher</div><div class="eq-fx-slider"><label>Bit Depth</label><input type="range" id="vmBitDepth" min="1" max="16" value="16" oninput="voicemodApplyCustom();this.nextElementSibling.textContent=this.value"><span class="range-val">16</span></div><div class="eq-fx-slider"><label>Sample Rate</label><input type="range" id="vmSampleRate" min="1000" max="44100" value="44100" oninput="voicemodApplyCustom();this.nextElementSibling.textContent=this.value"><span class="range-val">44100</span></div></div>
-        <div class="eq-section-title">Save Custom Preset</div>
-        <div class="vm-save-row"><input type="text" id="vmCustomName" placeholder="Preset name..." style="flex:1;padding:5px 8px;font-size:10px;background:var(--input-bg);border:1px solid var(--glass-border);color:var(--text);border-radius:var(--radius-sm)"><button class="mini-btn" onclick="voicemodSaveCustom()">Save</button></div>
-        <div id="vmCustomList" style="margin-top:8px"><span style="font-size:10px;color:var(--text-muted)">No custom presets saved</span></div>
-      </div>
-    </div>
 
   </div>
 </div>
@@ -1658,7 +1515,15 @@ function themeSave() {
 
 /* ── background video ── */
 
+function themeToggleStudioVideo() {
+  bgVideoSettings.studio = !bgVideoSettings.studio;
+  if (bgVideoSettings.studio && bgVideoSettings.path === null) bgVideoSettings.path = '';  // "No video" -> default video
+  themeApplyBgVideo();
+}
+
 function themeApplyBgVideo() {
+  document.documentElement.classList.toggle('studio-video', !!bgVideoSettings.studio && bgVideoSettings.path !== null);
+  document.getElementById('themeStudioVideoToggle')?.classList.toggle('on', !!bgVideoSettings.studio);
   const vid = document.getElementById('bgVideo');
   const label = document.getElementById('themeBgVideoName');
   document.documentElement.style.setProperty('--bg-video-opacity', bgVideoSettings.opacity / 100);
@@ -1788,10 +1653,6 @@ const STUDIO_PANELS = [
   { id: 'panelEqEnabled', slot: 'eqEnabled' },
   { id: 'panelEq', slot: 'eq' },
   { id: 'sub-presets', slot: 'presets' },
-  { id: 'tab-obs', slot: 'camera' },
-  { id: 'tab-voicemod', slot: 'ai' },
-  { id: 'tab-recorder', slot: 'recorder' },
-  { id: 'tab-apo', slot: 'apo' },
   { id: 'tab-themes', slot: 'themes' },
 ];
 
@@ -1870,6 +1731,7 @@ function setStudioView(view) {
   // zero-wide until the view is on screen.
   if (view === 'eq' && typeof eqDrawGraph === 'function') requestAnimationFrame(() => { try { eqDrawGraph(); } catch {} });
   if (view === 'soundpad') renderStudioLibrary(true);
+  if (view.startsWith('sp-') && typeof spOnView === 'function') spOnView(view);
 }
 
 /* ── sidebar library: one entry per category, like playlists ── */
@@ -2009,7 +1871,8 @@ function studioTick() {
   // mirrors it and writes through it.
   const vol = document.getElementById('stVolume');
   if (vol) {
-    if (document.activeElement !== vol) vol.value = Math.max(0, Math.min(200, volume));
+    const spVol = studioSource() === 'spotify' && spWeb.connected ? spWeb.player?.device?.volume_percent : null;
+    if (document.activeElement !== vol) vol.value = spVol != null ? spVol * 2 : Math.max(0, Math.min(200, volume));
     vol.style.setProperty('--pct', Math.min(100, (Number(vol.value) / 200) * 100) + '%');
   }
 
@@ -2027,6 +1890,7 @@ function studioTick() {
     (soundpadShuffle ? ' · shuffle on' : ''));
 
   renderStudioLibrary(false);
+  if (studioView === 'sp-now' && typeof spTickNow === 'function') spTickNow();
 }
 
 function startStudioTick() {
@@ -2112,6 +1976,7 @@ function studioSeekCommit(value) {
 }
 
 function studioSetVolume(value) {
+  if (studioSource() === 'spotify' && spWeb.connected && spWeb.player?.device) { spSetVolume(Number(value) / 2); return; }
   const slider = document.getElementById('eqVolumeSlider');
   if (!slider) return;
   slider.value = value;
@@ -2167,6 +2032,8 @@ function spotifyPositionMs() {
 
 function onSpotifyState(state) {
   if (!state) return;
+  // A connected account reports richer state; don't let the bridge overwrite it.
+  if (spWeb.connected && Date.now() - spWeb.playerAt < 6000) return;
   spotifyState = state;
   if (Object.prototype.hasOwnProperty.call(state, 'cover')) spotifyCover = state.cover || '';
   if (!state.available) spotifyCover = '';
@@ -2174,6 +2041,8 @@ function onSpotifyState(state) {
 }
 
 function spotifyCommand(cmd, arg) {
+  if (spWebHandlesCommand(cmd, arg)) return;
+  if (cmd === 'repeat') return;   // web API only
   if (!window.api?.spotifyCommand || !spotifyState?.available) return;
   // Apply the obvious result locally so the controls respond instantly; the
   // bridge's next report confirms or corrects it.
@@ -2454,13 +2323,32 @@ async function loadPcmWorklet(ctx) {
   }
 }
 
+let spotifyMicSend = null;       // Spotify -> main output (what the call hears)
+let spotifyMonitorSend = null;   // Spotify -> monitor output (what you hear)
+let spotifyToMonitor = false;
+let spotifyMonitorLevel = 80;
+// var, not let: the output bus reads this and may be built before this line runs.
+var micMonitorLevel = 100;
+try {
+  spotifyToMonitor = localStorage.getItem('spotify-to-monitor') === '1';
+  const savedMon = localStorage.getItem('spotify-monitor-level');
+  if (savedMon !== null && Number.isFinite(Number(savedMon))) spotifyMonitorLevel = Math.max(0, Math.min(150, Number(savedMon)));
+  const savedMic = localStorage.getItem('mic-monitor-level');
+  if (savedMic !== null && Number.isFinite(Number(savedMic))) micMonitorLevel = Math.max(0, Math.min(150, Number(savedMic)));
+} catch {}
+
+// Capture runs while either destination wants Spotify.
+function spotifyAudioWanted() { return spotifyToMic || spotifyToMonitor; }
+
 function spotifyAudioDropNode() {
   if (spotifyAudioNode) { try { spotifyAudioNode.port.postMessage({ type: 'close' }); spotifyAudioNode.disconnect(); } catch {} }
   disconnectNodes(spotifyAudioNodes);
   spotifyAudioNodes = [];
-  if (spotifyAudioGain) { try { spotifyAudioGain.disconnect(); } catch {} }
+  [spotifyAudioGain, spotifyMicSend, spotifyMonitorSend].forEach(n => { try { n?.disconnect(); } catch {} });
   spotifyAudioNode = null;
   spotifyAudioGain = null;
+  spotifyMicSend = null;
+  spotifyMonitorSend = null;
 }
 
 // EQ and effect changes rebuild every chain; Spotify's included.
@@ -2471,23 +2359,38 @@ function rebuildSpotifyChain() {
   spotifyAudioNodes = buildChain(spotifyAudioNode, spotifyAudioNode.context, spotifyAudioGain);
 }
 
+// The two sends are independent gains after the shared EQ chain, so turning
+// one on or off never interrupts the other.
+function spotifyApplySends() {
+  const now = spotifyAudioGain?.context.currentTime || 0;
+  const set = (node, value) => {
+    if (!node) return;
+    try { node.gain.setTargetAtTime(value, now, 0.02); } catch { node.gain.value = value; }
+  };
+  set(spotifyMicSend, spotifyToMic ? spotifyMicLevel / 100 : 0);
+  set(spotifyMonitorSend, spotifyToMonitor ? spotifyMonitorLevel / 100 : 0);
+}
+
 // Called by ensureOutputBus after it rebuilds (for example on a device switch).
 function spotifyAudioReattach() {
-  if (!spotifyToMic || !spotifyAudioGain || !outputBus) return;
+  if (!spotifyAudioWanted() || !spotifyAudioGain || !outputBus) return;
   if (spotifyAudioGain.context !== outputBus.ctx) { setTimeout(spotifyToMicSync, 0); return; }
-  try { spotifyAudioGain.disconnect(); } catch {}
-  spotifyAudioGain.connect(outputBus.mainOnly || outputBus.input);
+  try { spotifyMicSend.disconnect(); } catch {}
+  try { spotifyMonitorSend.disconnect(); } catch {}
+  spotifyMicSend.connect(outputBus.mainOnly || outputBus.input);
+  if (outputBus.monitorOnly) spotifyMonitorSend.connect(outputBus.monitorOnly);
+  spotifyApplySends();
 }
 
 async function spotifyToMicSync() {
-  if (!spotifyToMic) { await stopSpotifyToMic(); return; }
-  if (!window.api?.spotifyAudioStart) { showToast('Spotify to mic needs the updated app.', 'error'); return; }
+  if (!spotifyAudioWanted()) { await stopSpotifyToMic(); return; }
+  if (!window.api?.spotifyAudioStart) { showToast('Spotify audio needs the updated app.', 'error'); return; }
   if (spotifyAudioStarting) return;
   spotifyAudioStarting = true;
   try {
     const ctx = ensureCtx();
     if (ctx.state === 'suspended') { try { await ctx.resume(); } catch {} }
-    if (!(await loadPcmWorklet(ctx))) { showToast('Could not start Spotify to mic.', 'error'); return; }
+    if (!(await loadPcmWorklet(ctx))) { showToast('Could not start Spotify audio.', 'error'); return; }
     ensureOutputBus(ctx);
 
     const fresh = !spotifyAudioNode || spotifyAudioNode.context !== ctx;
@@ -2495,9 +2398,14 @@ async function spotifyToMicSync() {
       spotifyAudioDropNode();
       spotifyAudioNode = new AudioWorkletNode(ctx, 'cm-pcm-in', { numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2] });
       spotifyAudioGain = ctx.createGain();
-      spotifyAudioGain.gain.value = spotifyMicLevel / 100;
       // Same EQ and effects as the soundpad, so the EQ shapes Spotify too.
       spotifyAudioNodes = buildChain(spotifyAudioNode, ctx, spotifyAudioGain);
+      spotifyMicSend = ctx.createGain();
+      spotifyMonitorSend = ctx.createGain();
+      spotifyMicSend.gain.value = 0;
+      spotifyMonitorSend.gain.value = 0;
+      spotifyAudioGain.connect(spotifyMicSend);
+      spotifyAudioGain.connect(spotifyMonitorSend);
       if (spotifyAudioPendingPort) {
         spotifyAudioNode.port.postMessage({ type: 'port', port: spotifyAudioPendingPort }, [spotifyAudioPendingPort]);
         spotifyAudioPendingPort = null;
@@ -2515,7 +2423,7 @@ async function spotifyToMicSync() {
     }
   } finally {
     spotifyAudioStarting = false;
-    renderSpotifyToMic();
+    renderSpotifyMixer();
   }
 }
 
@@ -2525,52 +2433,59 @@ async function stopSpotifyToMic() {
   try { spotifyAudioPendingPort?.close(); } catch {}
   spotifyAudioPendingPort = null;
   spotifyAudioStatus = null;
-  renderSpotifyToMic();
+  renderSpotifyMixer();
+}
+
+async function spotifyUpdateWanted() {
+  if (spotifyAudioWanted()) {
+    spotifyApplySends();
+    await spotifyToMicSync();
+  } else {
+    await stopSpotifyToMic();
+  }
+  renderSpotifyMixer();
 }
 
 async function toggleSpotifyToMic() {
   spotifyToMic = !spotifyToMic;
   try { localStorage.setItem('spotify-to-mic', spotifyToMic ? '1' : '0'); } catch {}
-  renderSpotifyToMic();
-  if (spotifyToMic) await spotifyToMicSync();
-  else await stopSpotifyToMic();
+  await spotifyUpdateWanted();
+}
+
+async function toggleSpotifyToMonitor() {
+  spotifyToMonitor = !spotifyToMonitor;
+  try { localStorage.setItem('spotify-to-monitor', spotifyToMonitor ? '1' : '0'); } catch {}
+  if (spotifyToMonitor && !monitorEnabled) showToast('Spotify will play in your monitor once Monitor is on.', '');
+  await spotifyUpdateWanted();
 }
 
 function setSpotifyMicLevel(value) {
   spotifyMicLevel = Math.max(0, Math.min(150, Number(value) || 0));
   try { localStorage.setItem('spotify-mic-level', String(spotifyMicLevel)); } catch {}
-  if (spotifyAudioGain) {
-    try { spotifyAudioGain.gain.setTargetAtTime(spotifyMicLevel / 100, spotifyAudioGain.context.currentTime, 0.02); }
-    catch { spotifyAudioGain.gain.value = spotifyMicLevel / 100; }
-  }
-  renderSpotifyToMic();
+  spotifyApplySends();
+  renderSpotifyMixer();
 }
 
-function renderSpotifyToMic() {
-  document.getElementById('spotifyToMicToggle')?.classList.toggle('on', spotifyToMic);
-  const level = document.getElementById('spotifyMicLevel');
-  if (level && document.activeElement !== level) level.value = spotifyMicLevel;
-  const levelVal = document.getElementById('spotifyMicLevelVal');
-  if (levelVal) levelVal.textContent = spotifyMicLevel + '%';
-  const status = document.getElementById('spotifyToMicStatus');
-  if (!status) return;
-
-  let text;
-  if (!spotifyToMic) {
-    text = "Mixes only Spotify's own audio into your main output. Your Discord call is not captured.";
-  } else {
-    const s = spotifyAudioStatus;
-    const out = selectedOutputId ? (audioDeviceLabels.output.get(selectedOutputId) || 'your main output') : '';
-    if (!s || s.state === 'starting') text = 'Connecting to Spotify...';
-    else if (s.state === 'capturing') text = out
-      ? 'Live: Spotify is going into ' + out + '.'
-      : 'Live, but Main Output is your speakers, so Discord will not hear it. Set Main Output to CABLE Input.';
-    else if (s.state === 'waiting') text = 'Waiting for Spotify to open...';
-    else if (s.state === 'error') text = 'Could not capture Spotify: ' + (s.error || 'unknown error');
-    else text = 'Stopped.';
-  }
-  if (status.textContent !== text) status.textContent = text;
+function setSpotifyMonitorLevel(value) {
+  spotifyMonitorLevel = Math.max(0, Math.min(150, Number(value) || 0));
+  try { localStorage.setItem('spotify-monitor-level', String(spotifyMonitorLevel)); } catch {}
+  spotifyApplySends();
+  renderSpotifyMixer();
 }
+
+// Scales everything the monitor carries from the mic and soundpad, without
+// touching what the main output sends to the call.
+function setMicMonitorLevel(value) {
+  micMonitorLevel = Math.max(0, Math.min(150, Number(value) || 0));
+  try { localStorage.setItem('mic-monitor-level', String(micMonitorLevel)); } catch {}
+  const g = outputBus?.micMonitorGain;
+  if (g) {
+    try { g.gain.setTargetAtTime(micMonitorLevel / 100, g.context.currentTime, 0.02); } catch { g.gain.value = micMonitorLevel / 100; }
+  }
+  renderSpotifyMixer();
+}
+
+function renderSpotifyToMic() { renderSpotifyMixer(); }
 
 // MessagePorts cannot cross the context bridge, so the preload hands each new
 // capture port to the page with window.postMessage.
@@ -2596,10 +2511,786 @@ function initSpotifyToMic() {
     renderSpotifyToMic();
   });
   renderSpotifyToMic();
-  if (spotifyToMic) spotifyToMicSync();
+  if (spotifyToMic || spotifyToMonitor) spotifyToMicSync();
 }
 
 setTimeout(initSpotifyToMic, 900);
+
+// ── Spotify account, player and library ──
+// Sign-in and tokens live in the main process; this page only asks it to make
+// Web API calls. Playback itself happens in a Spotify app through Spotify
+// Connect, so this is the remote, the library and the search.
+const spWeb = {
+  connected: false, connecting: false, profile: null, clientId: '', redirectUri: '',
+  player: null, playerAt: 0, volumeHoldUntil: 0, library: 'playlists',
+  searchSeq: 0, detailSeq: 0, back: 'sp-home',
+};
+const spLists = new Map();
+let spPollTimer = null;
+let spVolumeTimer = null;
+let spSearchTimer = null;
+let spQueueAt = 0;
+let spQueueKey = '';
+
+async function spApi(method, apiPath, body) {
+  const r = await window.api.spotifyWebRequest(method, apiPath, body);
+  if (r?.error) throw Object.assign(new Error(r.error), { status: r.status || 0 });
+  if (r.status === 204 || r.status === 202) return null;
+  if (r.status >= 400) {
+    throw Object.assign(new Error(r.data?.error?.message || ('Spotify returned ' + r.status)),
+      { status: r.status, reason: r.data?.error?.reason || '' });
+  }
+  return r.data;
+}
+
+function spHandleError(e) {
+  if (e?.status === 403 && /premium/i.test((e.reason || '') + ' ' + (e.message || ''))) {
+    showToast('Controlling playback needs Spotify Premium.', 'error');
+  } else if (e?.status === 429) {
+    showToast('Spotify is limiting requests. Try again in a moment.', 'error');
+  } else {
+    showToast('Spotify: ' + (e?.message || e), 'error');
+  }
+}
+
+function spImg(images, min = 64) {
+  const list = (images || []).filter(i => i && i.url);
+  if (!list.length) return '';
+  const fit = list.filter(i => (i.width || 0) >= min).sort((a, b) => (a.width || 0) - (b.width || 0))[0];
+  return (fit || list[0]).url;
+}
+const spArtists = t => (t?.artists || []).map(a => a.name).join(', ');
+// DOMParser documents are inert, so descriptions can contain HTML safely.
+const spText = s => new DOMParser().parseFromString(String(s || ''), 'text/html').body.textContent || '';
+
+/* ── account ── */
+
+async function spRefreshStatus() {
+  if (!window.api?.spotifyWebStatus) return;
+  const s = await window.api.spotifyWebStatus();
+  const was = spWeb.connected;
+  Object.assign(spWeb, {
+    connected: !!s.connected, connecting: !!s.connecting, profile: s.profile || null,
+    clientId: s.clientId || '', redirectUri: s.redirectUri || '',
+  });
+  renderSpAccount();
+  if (spWeb.connected) startSpPoll(); else stopSpPoll();
+  if (was !== spWeb.connected) {
+    const home = document.getElementById('spHome');
+    if (home) home.dataset.loadedAt = '';
+    if (studioView && studioView.startsWith('sp-')) spOnView(studioView);
+  }
+}
+
+function renderSpAccount() {
+  document.querySelectorAll('.sp-account-host').forEach(host => {
+    let html;
+    if (spWeb.connected) {
+      const p = spWeb.profile || {};
+      const avatar = spImg(p.images, 64);
+      html = `<div class="sp-acct">
+        <div class="sp-avatar">${avatar ? `<img src="${esc(avatar)}" alt="">` : esc((p.display_name || '?').charAt(0).toUpperCase())}</div>
+        <div class="sp-acct-text"><div class="sp-acct-name">${esc(p.display_name || p.id || 'Spotify account')}</div>
+          <div class="sp-acct-sub">Connected${p.product === 'premium' ? ' · Premium' : ' · Free: playback control needs Premium'}</div></div>
+        <div class="sp-acct-actions">
+          <button class="sp-pill primary" data-sp-action="open-player">Open player</button>
+          <button class="sp-pill" data-sp-action="switch">Switch account</button>
+          <button class="sp-pill" data-sp-action="disconnect">Disconnect</button>
+        </div></div>`;
+    } else if (spWeb.connecting) {
+      html = `<div class="sp-acct">
+        <div class="sp-acct-text"><div class="sp-acct-name">Waiting for Spotify…</div>
+          <div class="sp-acct-sub">Approve Custom Mic in the browser window that opened.</div></div>
+        <div class="sp-acct-actions"><button class="sp-pill" data-sp-action="cancel">Cancel</button></div></div>`;
+    } else {
+      html = `<div class="sp-acct setup">
+        <div class="sp-acct-text"><div class="sp-acct-name">Connect your Spotify account</div>
+          <div class="sp-acct-sub">You sign in on Spotify's own page. Custom Mic never sees your password.</div></div>
+        <div class="sp-connect-row">
+          <input class="sp-input" data-sp-client placeholder="Spotify app Client ID" value="${esc(spWeb.clientId)}" spellcheck="false" autocomplete="off">
+          <button class="sp-pill primary" data-sp-action="connect">Connect Spotify</button>
+        </div>
+        <details class="sp-howto"${spWeb.clientId ? '' : ' open'}><summary>Get a Client ID (one time, about 2 minutes)</summary>
+          <ol>
+            <li>Open <a href="#" data-sp-action="open-dashboard">developer.spotify.com/dashboard</a>, sign in, and create an app.</li>
+            <li>Add this Redirect URI: <code>${esc(spWeb.redirectUri)}</code> <button class="sp-pill tiny" data-sp-action="copy-redirect">Copy</button></li>
+            <li>Tick <b>Web API</b>, save, then paste the app's <b>Client ID</b> above.</li>
+            <li>Under the app's <b>User Management</b>, add the email of the Spotify account you will connect.</li>
+          </ol>
+        </details></div>`;
+    }
+    // Skip identical re-renders so a half-typed Client ID is not wiped.
+    if (host.dataset.html !== html) { host.innerHTML = html; host.dataset.html = html; }
+  });
+}
+
+async function spAction(action, el) {
+  if (action === 'connect' || action === 'switch') {
+    const input = el.closest('.sp-account-host')?.querySelector('[data-sp-client]');
+    const clientId = (input ? input.value : spWeb.clientId).trim();
+    if (!/^[0-9a-f]{32}$/i.test(clientId)) {
+      showToast('Paste the Client ID from your Spotify developer app (32 letters and numbers).', 'error');
+      return;
+    }
+    spWeb.connecting = true;
+    renderSpAccount();
+    const r = await window.api.spotifyWebConnect(clientId, action === 'switch');
+    if (r?.ok) showToast('Connected to Spotify as ' + (r.profile?.display_name || r.profile?.id || 'your account') + '.', 'success');
+    else if (r?.error && !r.cancelled) showToast('Spotify: ' + r.error, 'error');
+    await spRefreshStatus();
+  } else if (action === 'cancel') {
+    await window.api.spotifyWebCancel();
+    await spRefreshStatus();
+  } else if (action === 'disconnect') {
+    await window.api.spotifyWebDisconnect();
+    spWeb.player = null;
+    if (spotifyState?.source === 'web') { spotifyState = null; spotifyCover = ''; }
+    await spRefreshStatus();
+    showToast('Spotify disconnected.', '');
+  } else if (action === 'open-player') {
+    setAppLayout('studio');
+    setStudioView('sp-home');
+  } else if (action === 'open-dashboard') {
+    window.api.spotifyWebOpen('dashboard');
+  } else if (action === 'open-app') {
+    window.api.spotifyWebOpen('app');
+  } else if (action === 'copy-redirect') {
+    try { await navigator.clipboard.writeText(spWeb.redirectUri); showToast('Redirect URI copied.', ''); }
+    catch { showToast(spWeb.redirectUri, ''); }
+  } else if (action === 'back') {
+    setStudioView(spWeb.back || 'sp-home');
+  }
+}
+
+/* ── playback state ── */
+
+function startSpPoll() {
+  if (spPollTimer) return;
+  spPollPlayer();
+  spPollTimer = setInterval(spPollPlayer, 2000);
+}
+
+function stopSpPoll() {
+  clearInterval(spPollTimer);
+  spPollTimer = null;
+}
+
+async function spPollPlayer() {
+  if (!spWeb.connected) return;
+  let data;
+  try { data = await spApi('GET', '/v1/me/player?additional_types=episode'); }
+  catch (e) { if (e.status === 401) spRefreshStatus(); return; }
+  const localVolume = spWeb.player?.device?.volume_percent;
+  spWeb.player = data;
+  spWeb.playerAt = Date.now();
+  // Keep the slider where the user left it until Spotify catches up.
+  if (data?.device && Date.now() < spWeb.volumeHoldUntil && localVolume != null) data.device.volume_percent = localVolume;
+
+  const item = data?.item;
+  if (!item) {
+    if (spotifyState?.source === 'web') { spotifyState = { available: false, source: 'web' }; spotifyCover = ''; }
+  } else {
+    const now = Date.now();
+    spotifyState = {
+      available: true, source: 'web',
+      title: item.name,
+      artist: item.type === 'episode' ? (item.show?.name || '') : spArtists(item),
+      album: item.album?.name || '',
+      status: data.is_playing ? 'Playing' : 'Paused',
+      positionMs: data.progress_ms || 0, endMs: item.duration_ms || 0,
+      timelineUpdatedAt: now, receivedAt: now,
+      shuffle: !!data.shuffle_state, repeat: data.repeat_state || 'off',
+      uri: item.uri, trackKey: item.uri,
+    };
+    spotifyCover = spImg(item.album?.images || item.images, 300);
+  }
+  renderSpotifyCard();
+  spRenderNow();
+  spMarkPlaying();
+}
+
+// Routes player controls through the Web API when an account is connected
+// and a Spotify device is active; otherwise the desktop-app bridge handles them.
+function spWebHandlesCommand(cmd, arg) {
+  if (!spWeb.connected || !spWeb.player?.device) return false;
+  const now = Date.now();
+  const s = spotifyState;
+  let call;
+  if (cmd === 'toggle') {
+    const playing = s?.status === 'Playing';
+    if (s?.available) spotifyState = { ...s, positionMs: spotifyPositionMs(), timelineUpdatedAt: now, receivedAt: now, status: playing ? 'Paused' : 'Playing' };
+    call = spApi('PUT', playing ? '/v1/me/player/pause' : '/v1/me/player/play');
+  } else if (cmd === 'next') {
+    call = spApi('POST', '/v1/me/player/next');
+  } else if (cmd === 'prev') {
+    call = spApi('POST', '/v1/me/player/previous');
+  } else if (cmd === 'seek') {
+    const ms = Math.max(0, Math.round(Number(arg) || 0));
+    if (s?.available) spotifyState = { ...s, positionMs: ms, timelineUpdatedAt: now, receivedAt: now };
+    call = spApi('PUT', '/v1/me/player/seek?position_ms=' + ms);
+  } else if (cmd === 'shuffle') {
+    if (s) spotifyState = { ...s, shuffle: !!arg };
+    call = spApi('PUT', '/v1/me/player/shuffle?state=' + (arg ? 'true' : 'false'));
+  } else if (cmd === 'repeat') {
+    const next = { off: 'context', context: 'track', track: 'off' }[s?.repeat || 'off'];
+    if (s) spotifyState = { ...s, repeat: next };
+    call = spApi('PUT', '/v1/me/player/repeat?state=' + next);
+  } else {
+    return false;
+  }
+  spWeb.playerAt = now;
+  renderSpotifyCard();
+  spRenderNow();
+  call.then(() => setTimeout(spPollPlayer, 350)).catch(e => { spHandleError(e); spPollPlayer(); });
+  return true;
+}
+
+function spSetVolume(value) {
+  const pct = Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+  if (spWeb.player?.device) spWeb.player.device.volume_percent = pct;
+  spWeb.volumeHoldUntil = Date.now() + 2500;
+  const vol = document.getElementById('spNowVol');
+  if (vol) vol.style.setProperty('--pct', pct + '%');
+  clearTimeout(spVolumeTimer);
+  spVolumeTimer = setTimeout(() => {
+    spApi('PUT', '/v1/me/player/volume?volume_percent=' + pct).catch(spHandleError);
+  }, 180);
+}
+
+async function spDevice() {
+  const d = await spApi('GET', '/v1/me/player/devices');
+  const list = (d?.devices || []).filter(x => !x.is_restricted);
+  const pick = list.find(x => x.is_active) || list.find(x => x.type === 'Computer') || list[0];
+  if (!pick) {
+    window.api.spotifyWebOpen('app');
+    throw new Error('Open the Spotify app on this PC first, then press play again.');
+  }
+  return pick.id;
+}
+
+async function spPlay(body) {
+  if (!spWeb.connected) { showToast('Connect your Spotify account first.', ''); return; }
+  try {
+    const device = await spDevice();
+    await spApi('PUT', '/v1/me/player/play?device_id=' + encodeURIComponent(device), body || null);
+    setTimeout(spPollPlayer, 450);
+  } catch (e) {
+    spHandleError(e);
+  }
+}
+
+function spPlayUri(uri) {
+  if (!uri) return;
+  if (/^spotify:(track|episode):/.test(uri)) spPlay({ uris: [uri] });
+  else spPlay({ context_uri: uri });
+}
+
+function spPlayFromList(listId, index) {
+  const list = spLists.get(listId);
+  const track = list?.tracks[index];
+  if (!track) return;
+  if (list.contextUri) {
+    spPlay({ context_uri: list.contextUri, offset: { uri: track.uri } });
+  } else {
+    // The API takes up to 100 URIs, so send a window around the chosen song.
+    const start = Math.max(0, Math.min(index - 50, list.tracks.length - 100));
+    const uris = list.tracks.slice(start, start + 100).map(t => t.uri);
+    spPlay({ uris, offset: { position: index - start } });
+  }
+}
+
+/* ── building blocks ── */
+
+function spTile(open, playUri, img, title, sub, round) {
+  return `<div class="sp-tile"${open ? ` data-sp-open="${esc(open)}"` : ''}>
+    <div class="sp-tile-art${round ? ' round' : ''}">${img ? `<img src="${esc(img)}" alt="" loading="lazy">` : '<span>&#9835;</span>'}
+      ${playUri ? `<button class="sp-tile-play" data-sp-play="${esc(playUri)}" title="Play">${ST_ICON_PLAY}</button>` : ''}</div>
+    <div class="sp-tile-title">${esc(title || '')}</div>
+    <div class="sp-tile-sub">${esc(sub || '')}</div></div>`;
+}
+
+function spShelf(title, items) {
+  return items ? `<section class="sp-shelf"><h2>${esc(title)}</h2><div class="sp-grid">${items}</div></section>` : '';
+}
+
+function spTrackList(listId, tracks, { contextUri = '', showAlbum = true, showArt = true } = {}) {
+  tracks = (tracks || []).filter(t => t && t.uri && !t.is_local);
+  spLists.set(listId, { tracks, contextUri });
+  if (!tracks.length) return '<div class="sp-empty">Nothing here yet.</div>';
+  const rows = tracks.map((t, i) => {
+    const art = showArt ? spImg(t.album?.images, 64) : '';
+    return `<div class="sp-track" data-sp-track="${i}" data-uri="${esc(t.uri)}">
+      <span class="sp-t-num">${i + 1}</span>
+      <span class="sp-t-main">${showArt ? (art ? `<img src="${esc(art)}" alt="" loading="lazy">` : '<span class="sp-t-noart">&#9835;</span>') : ''}
+        <span class="sp-t-text"><span class="sp-t-name">${esc(t.name)}</span>
+        <span class="sp-t-artist">${t.explicit ? '<i class="sp-e">E</i>' : ''}${esc(spArtists(t))}</span></span></span>
+      ${showAlbum ? `<span class="sp-t-album">${esc(t.album?.name || '')}</span>` : ''}
+      <span class="sp-t-dur">${soundpadFmt(t.duration_ms)}</span></div>`;
+  }).join('');
+  return `<div class="sp-tracks${showAlbum ? '' : ' no-album'}" data-sp-list="${esc(listId)}">
+    <div class="sp-track head"><span class="sp-t-num">#</span><span>Title</span>${showAlbum ? '<span>Album</span>' : ''}<span class="sp-t-dur">Time</span></div>
+    ${rows}</div>`;
+}
+
+function spMarkPlaying() {
+  const uri = spotifyState?.source === 'web' ? spotifyState.uri : '';
+  document.querySelectorAll('#studioShell .sp-track[data-uri]').forEach(r =>
+    r.classList.toggle('playing', !!uri && r.dataset.uri === uri));
+}
+
+function spNeedsAccount(container) {
+  if (spWeb.connected) return false;
+  container.innerHTML = `<div class="sp-hero-connect"><h1>Spotify in Custom Mic</h1>
+    <p>Connect your account to search, browse your library and control playback from here.</p>
+    <div class="sp-account-host"></div></div>`;
+  renderSpAccount();
+  return true;
+}
+
+// Fetch every page of a paginated endpoint, up to a cap.
+async function spAll(first, cap) {
+  let next = first;
+  const out = [];
+  while (next && out.length < cap) {
+    const d = await spApi('GET', next.replace('https://api.spotify.com', ''));
+    out.push(...(d?.items || []).filter(Boolean));
+    next = d?.next || '';
+  }
+  return out;
+}
+
+function spHero(img, eyebrow, title, meta, playUri, description = '', round = false, liked = false) {
+  return `<header class="sp-hero">
+    <div class="sp-hero-art${round ? ' round' : ''}${liked ? ' liked' : ''}">${img ? `<img src="${esc(img)}" alt="">` : (liked ? '&#9829;' : '&#9835;')}</div>
+    <div class="sp-hero-text"><div class="st-eyebrow">${esc(eyebrow)}</div><h1>${esc(title)}</h1>
+      ${description ? `<div class="sp-hero-desc">${esc(description)}</div>` : ''}
+      <div class="sp-hero-meta">${esc(meta)}</div></div>
+  </header>
+  <div class="st-actions"><button class="st-play-big sp-green" data-sp-hero-play="${esc(playUri || '')}" title="Play">${ST_ICON_PLAY}</button></div>`;
+}
+
+/* ── pages ── */
+
+async function spRenderHome() {
+  const el = document.getElementById('spHome');
+  if (!el) return;
+  el.dataset.loadedAt = String(Date.now());
+  if (spNeedsAccount(el)) return;
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  el.innerHTML = `<h1 class="sp-greeting">${greeting}</h1><div class="sp-loading">Loading your music…</div>`;
+  const [playlists, recent, top] = await Promise.all([
+    spApi('GET', '/v1/me/playlists?limit=20').catch(() => null),
+    spApi('GET', '/v1/me/player/recently-played?limit=40').catch(() => null),
+    spApi('GET', '/v1/me/top/artists?limit=12&time_range=short_term').catch(() => null),
+  ]);
+  if (!spWeb.connected) return;
+  const pls = (playlists?.items || []).filter(Boolean);
+  const seen = new Set();
+  const recentTracks = (recent?.items || []).map(i => i.track).filter(t => t && t.id && !seen.has(t.id) && seen.add(t.id));
+  const albums = new Map();
+  recentTracks.forEach(t => { if (t.album?.id && !albums.has(t.album.id)) albums.set(t.album.id, t.album); });
+
+  const shortcut = (open, art, name, liked) => `<div class="sp-shortcut" data-sp-open="${esc(open)}">
+    <span class="sp-shortcut-art${liked ? ' liked' : ''}">${art ? `<img src="${esc(art)}" alt="">` : (liked ? '&#9829;' : '&#9835;')}</span>
+    <span>${esc(name)}</span></div>`;
+  const shortcuts = shortcut('liked:me', '', 'Liked Songs', true) +
+    pls.slice(0, 7).map(p => shortcut('playlist:' + p.id, spImg(p.images, 64), p.name)).join('');
+
+  el.innerHTML = `<h1 class="sp-greeting">${greeting}</h1>
+    <div class="sp-shortcuts">${shortcuts}</div>
+    ${spShelf('Recently played', recentTracks.slice(0, 12).map(t => spTile('album:' + (t.album?.id || ''), t.uri, spImg(t.album?.images, 300), t.name, spArtists(t))).join(''))}
+    ${spShelf('Jump back in', [...albums.values()].slice(0, 12).map(a => spTile('album:' + a.id, a.uri, spImg(a.images, 300), a.name, (a.artists || []).map(x => x.name).join(', '))).join(''))}
+    ${spShelf('Your top artists', (top?.items || []).map(a => spTile('artist:' + a.id, a.uri, spImg(a.images, 300), a.name, 'Artist', true)).join(''))}
+    ${spShelf('Your playlists', pls.map(p => spTile('playlist:' + p.id, p.uri, spImg(p.images, 300), p.name, 'By ' + (p.owner?.display_name || 'you'))).join(''))}
+    ${!recentTracks.length && !pls.length ? '<div class="sp-empty">Play something in Spotify and it will show up here.</div>' : ''}`;
+}
+
+function spSearchInput(value) {
+  clearTimeout(spSearchTimer);
+  spSearchTimer = setTimeout(() => spRunSearch(value), 320);
+}
+
+async function spRunSearch(query) {
+  const el = document.getElementById('spSearchResults');
+  if (!el) return;
+  if (spNeedsAccount(el)) return;
+  const q = String(query || '').trim();
+  const seq = ++spWeb.searchSeq;
+  if (!q) { el.innerHTML = '<div class="sp-empty">Search for songs, artists, albums and playlists.</div>'; return; }
+  el.innerHTML = '<div class="sp-loading">Searching…</div>';
+  let data;
+  try {
+    data = await spApi('GET', '/v1/search?type=track,artist,album,playlist&limit=10&q=' + encodeURIComponent(q));
+  } catch (e) {
+    if (seq === spWeb.searchSeq) el.innerHTML = '<div class="sp-empty">' + esc('Search failed: ' + e.message) + '</div>';
+    return;
+  }
+  if (seq !== spWeb.searchSeq) return;   // a newer search already started
+
+  const tracks = (data?.tracks?.items || []).filter(Boolean);
+  const artists = (data?.artists?.items || []).filter(Boolean);
+  const albums = (data?.albums?.items || []).filter(Boolean);
+  const playlists = (data?.playlists?.items || []).filter(Boolean);
+
+  const topArtist = artists[0] && artists[0].name.toLowerCase() === q.toLowerCase();
+  const top = topArtist ? { kind: 'artist', item: artists[0] } : tracks[0] ? { kind: 'track', item: tracks[0] } : artists[0] ? { kind: 'artist', item: artists[0] } : null;
+  let topHtml = '';
+  if (top) {
+    const it = top.item;
+    const isArtist = top.kind === 'artist';
+    const img = isArtist ? spImg(it.images, 300) : spImg(it.album?.images, 300);
+    topHtml = `<div class="sp-top"${isArtist ? ` data-sp-open="artist:${esc(it.id)}"` : ''}>
+      <div class="sp-top-art${isArtist ? ' round' : ''}">${img ? `<img src="${esc(img)}" alt="">` : ''}</div>
+      <div class="sp-top-name">${esc(it.name)}</div>
+      <div class="sp-top-sub">${isArtist ? 'Artist' : 'Song · ' + esc(spArtists(it))}</div>
+      <button class="sp-tile-play" data-sp-play="${esc(it.uri)}" title="Play">${ST_ICON_PLAY}</button></div>`;
+  }
+
+  el.innerHTML = `
+    ${top || tracks.length ? `<div class="sp-search-top">
+      ${top ? `<section><h2>Top result</h2>${topHtml}</section>` : ''}
+      ${tracks.length ? `<section><h2>Songs</h2>${spTrackList('search', tracks.slice(0, 5), { showAlbum: false })}</section>` : ''}
+    </div>` : ''}
+    ${spShelf('Artists', artists.map(a => spTile('artist:' + a.id, a.uri, spImg(a.images, 300), a.name, 'Artist', true)).join(''))}
+    ${spShelf('Albums', albums.map(a => spTile('album:' + a.id, a.uri, spImg(a.images, 300), a.name, [(a.release_date || '').slice(0, 4), (a.artists || []).map(x => x.name).join(', ')].filter(Boolean).join(' · '))).join(''))}
+    ${spShelf('Playlists', playlists.map(p => spTile('playlist:' + p.id, p.uri, spImg(p.images, 300), p.name, 'By ' + (p.owner?.display_name || 'Spotify'))).join(''))}
+    ${!tracks.length && !artists.length && !albums.length && !playlists.length ? '<div class="sp-empty">No results for "' + esc(q) + '".</div>' : ''}`;
+  spMarkPlaying();
+}
+
+function spPlaylistGrid(items) {
+  return `<div class="sp-grid">
+    <div class="sp-tile" data-sp-open="liked:me"><div class="sp-tile-art liked"><span>&#9829;</span></div>
+      <div class="sp-tile-title">Liked Songs</div><div class="sp-tile-sub">Your saved songs</div></div>
+    ${items.map(p => spTile('playlist:' + p.id, p.uri, spImg(p.images, 300), p.name, 'Playlist · ' + (p.owner?.display_name || ''))).join('')}
+  </div>`;
+}
+
+async function spRenderLibrary(tab) {
+  if (tab) spWeb.library = tab;
+  const el = document.getElementById('spLibrary');
+  if (!el) return;
+  document.querySelectorAll('#spLibChips [data-sp-lib]').forEach(c => c.classList.toggle('on', c.dataset.spLib === spWeb.library));
+  if (spNeedsAccount(el)) return;
+  const which = spWeb.library;
+  el.innerHTML = '<div class="sp-loading">Loading…</div>';
+  try {
+    let html = '';
+    if (which === 'playlists') {
+      html = spPlaylistGrid(await spAll('/v1/me/playlists?limit=50', 300));
+    } else if (which === 'albums') {
+      const items = await spAll('/v1/me/albums?limit=50', 300);
+      html = `<div class="sp-grid">${items.map(i => i.album).filter(Boolean).map(a => spTile('album:' + a.id, a.uri, spImg(a.images, 300), a.name, (a.artists || []).map(x => x.name).join(', '))).join('')}</div>`;
+    } else if (which === 'artists') {
+      const d = await spApi('GET', '/v1/me/following?type=artist&limit=50');
+      html = `<div class="sp-grid">${(d?.artists?.items || []).map(a => spTile('artist:' + a.id, a.uri, spImg(a.images, 300), a.name, 'Artist', true)).join('')}</div>`;
+    } else if (which === 'liked') {
+      const items = await spAll('/v1/me/tracks?limit=50', 500);
+      html = spTrackList('library', items.map(i => i.track));
+    } else if (which === 'recent') {
+      const d = await spApi('GET', '/v1/me/player/recently-played?limit=50');
+      html = spTrackList('library', (d?.items || []).map(i => i.track));
+    }
+    if (which !== spWeb.library) return;
+    el.innerHTML = html.replace(/<div class="sp-grid">\s*<\/div>/, '') || '<div class="sp-empty">Nothing here yet.</div>';
+    spMarkPlaying();
+  } catch (e) {
+    if (which === spWeb.library) el.innerHTML = '<div class="sp-empty">' + esc('Could not load: ' + e.message) + '</div>';
+  }
+}
+
+async function spRenderPlaylists() {
+  const el = document.getElementById('spPlaylists');
+  if (!el) return;
+  if (spNeedsAccount(el)) return;
+  el.innerHTML = '<div class="sp-loading">Loading…</div>';
+  try { el.innerHTML = spPlaylistGrid(await spAll('/v1/me/playlists?limit=50', 300)); }
+  catch (e) { el.innerHTML = '<div class="sp-empty">' + esc('Could not load playlists: ' + e.message) + '</div>'; }
+}
+
+async function spOpen(target) {
+  const [kind, id] = String(target).split(':');
+  if (!kind || (kind !== 'liked' && !id)) return;
+  if (studioView !== 'sp-detail') spWeb.back = studioView || 'sp-home';
+  setStudioView('sp-detail');
+  const el = document.getElementById('spDetail');
+  if (!el) return;
+  if (spNeedsAccount(el)) return;
+  el.innerHTML = '<div class="sp-loading">Loading…</div>';
+  const seq = ++spWeb.detailSeq;
+  try {
+    let hero = '';
+    let body = '';
+    const eid = encodeURIComponent(id || '');
+    if (kind === 'playlist') {
+      const p = await spApi('GET', '/v1/playlists/' + eid + '?fields=' + encodeURIComponent('id,name,description,uri,images,owner(display_name),tracks(total)'));
+      let tracks = [];
+      let note = '';
+      try {
+        tracks = (await spAll('/v1/playlists/' + eid + '/tracks?limit=100', 500)).map(i => i.track);
+      } catch (e) {
+        note = e.status === 403 || e.status === 404
+          ? "Spotify doesn't let apps list the songs in this playlist, but you can still play it."
+          : 'Could not load the songs: ' + e.message;
+      }
+      hero = spHero(spImg(p.images, 300), 'Playlist', p.name,
+        [p.owner?.display_name, (p.tracks?.total ?? tracks.length) + ' songs'].filter(Boolean).join(' · '),
+        p.uri, spText(p.description));
+      body = note ? `<div class="sp-empty">${esc(note)}</div>` : spTrackList('detail', tracks, { contextUri: p.uri });
+    } else if (kind === 'album') {
+      const a = await spApi('GET', '/v1/albums/' + eid);
+      const tracks = (a.tracks?.items || []).map(t => ({ ...t, album: { name: a.name, images: a.images } }));
+      hero = spHero(spImg(a.images, 300), a.album_type === 'single' ? 'Single' : 'Album', a.name,
+        [(a.artists || []).map(x => x.name).join(', '), (a.release_date || '').slice(0, 4), tracks.length + ' songs'].filter(Boolean).join(' · '),
+        a.uri);
+      body = spTrackList('detail', tracks, { contextUri: a.uri, showAlbum: false, showArt: false });
+    } else if (kind === 'artist') {
+      const market = spWeb.profile?.country || 'US';
+      const [a, top, albums] = await Promise.all([
+        spApi('GET', '/v1/artists/' + eid),
+        spApi('GET', '/v1/artists/' + eid + '/top-tracks?market=' + encodeURIComponent(market)).catch(() => null),
+        spApi('GET', '/v1/artists/' + eid + '/albums?include_groups=album,single&limit=20').catch(() => null),
+      ]);
+      hero = spHero(spImg(a.images, 300), 'Artist', a.name,
+        a.followers?.total ? Number(a.followers.total).toLocaleString() + ' followers' : '', a.uri, '', true);
+      body = (top?.tracks?.length ? `<h2 class="sp-h2">Popular</h2>${spTrackList('detail', top.tracks.slice(0, 10))}` : '') +
+        spShelf('Discography', (albums?.items || []).map(x => spTile('album:' + x.id, x.uri, spImg(x.images, 300), x.name,
+          [(x.release_date || '').slice(0, 4), x.album_type].filter(Boolean).join(' · '))).join(''));
+    } else if (kind === 'liked') {
+      const items = await spAll('/v1/me/tracks?limit=50', 500);
+      hero = spHero('', 'Playlist', 'Liked Songs', (spWeb.profile?.display_name || 'You') + ' · ' + items.length + ' songs', '', '', false, true);
+      body = spTrackList('detail', items.map(i => i.track));
+    } else {
+      return;
+    }
+    if (seq !== spWeb.detailSeq) return;
+    el.innerHTML = hero + body;
+    spMarkPlaying();
+  } catch (e) {
+    if (seq === spWeb.detailSeq) el.innerHTML = '<div class="sp-empty">' + esc('Could not load this: ' + e.message) + '</div>';
+  }
+}
+
+/* ── now playing ── */
+
+function spRenderNow() {
+  if (!document.getElementById('spNowRoot')) return;
+  const s = spotifyState;
+  const live = !!s?.available;
+  const setText = (id, v) => { const e = document.getElementById(id); if (e && e.textContent !== v) e.textContent = v; };
+  setText('spNowTitle', live ? (s.title || 'Unknown') : 'Nothing playing');
+  setText('spNowSub', live
+    ? [s.artist, s.album].filter(Boolean).join(' · ')
+    : (spWeb.connected ? 'Pick something from Home, Search or Your Library.' : 'Play something in Spotify, or connect your account.'));
+  const device = spWeb.player?.device;
+  setText('spNowDevice', device ? 'Playing on ' + device.name : (live ? 'Spotify' : ''));
+
+  const art = document.getElementById('spNowArt');
+  if (art) {
+    if (live && spotifyCover) { if (art.getAttribute('src') !== spotifyCover) art.setAttribute('src', spotifyCover); art.hidden = false; }
+    else art.hidden = true;
+  }
+  stSetIcon('spNowPlay', live && s.status === 'Playing');
+  document.getElementById('spNowShuffle')?.classList.toggle('on', !!s?.shuffle);
+  const repeat = document.getElementById('spNowRepeat');
+  if (repeat) {
+    repeat.classList.toggle('on', !!s?.repeat && s.repeat !== 'off');
+    repeat.classList.toggle('one', s?.repeat === 'track');
+    repeat.disabled = !spWeb.connected;
+  }
+  const vol = document.getElementById('spNowVol');
+  if (vol) {
+    vol.disabled = !(spWeb.connected && device);
+    if (document.activeElement !== vol && device) vol.value = device.volume_percent ?? 0;
+    vol.style.setProperty('--pct', Number(vol.value) + '%');
+  }
+  spTickNow();
+  if (studioView === 'sp-now') spLoadQueue();
+}
+
+function spTickNow() {
+  const s = spotifyState;
+  const live = !!s?.available;
+  const pos = live ? spotifyPositionMs() : 0;
+  const dur = live ? Number(s.endMs) || 0 : 0;
+  const seek = document.getElementById('spNowSeek');
+  if (seek && document.activeElement !== seek) {
+    const v = dur ? Math.round((pos / dur) * 1000) : 0;
+    seek.value = v;
+    seek.style.setProperty('--pct', (v / 10) + '%');
+  }
+  const a = document.getElementById('spNowPos');
+  if (a) a.textContent = soundpadFmt(pos);
+  const b = document.getElementById('spNowDur');
+  if (b) b.textContent = soundpadFmt(dur);
+}
+
+function spNowSeekCommit(value) {
+  const end = Number(spotifyState?.endMs) || 0;
+  if (end) spotifyCommand('seek', (Number(value) / 1000) * end);
+}
+
+async function spLoadQueue() {
+  const el = document.getElementById('spQueue');
+  if (!el) return;
+  if (!spWeb.connected) { el.innerHTML = ''; return; }
+  const key = spotifyState?.uri || '';
+  if (Date.now() - spQueueAt < 8000 && spQueueKey === key) return;
+  spQueueAt = Date.now();
+  spQueueKey = key;
+  try {
+    const q = await spApi('GET', '/v1/me/player/queue');
+    const next = (q?.queue || []).filter(t => t && t.type === 'track').slice(0, 10);
+    el.innerHTML = next.length ? '<h2 class="sp-h2">Next up</h2>' + spTrackList('queue', next) : '';
+    spMarkPlaying();
+  } catch {
+    el.innerHTML = '';
+  }
+}
+
+/* ── mixer ── */
+
+function spMixerHtml() {
+  const row = (key, title, statusKey, toggleKey) => `<div class="sp-mix-row">
+      <div class="sp-mix-label"><b>${title}</b><span data-mix-status="${statusKey}"></span></div>
+      <button class="sp-switch" data-mix-toggle="${toggleKey}" aria-label="${title}"></button>
+      <input type="range" min="0" max="150" step="1" data-mix="${key}" aria-label="${title} level">
+      <span class="sp-mix-val" data-mix-val="${key}"></span></div>`;
+  return `<div class="sp-mix">
+    <div class="sp-mix-head"><span>Audio mix</span><span class="sp-badge" data-mix-badge></span></div>
+    ${row('micMonitor', 'Mic monitor', 'micMonitor', 'micMonitor')}
+    ${row('spotifyMonitor', 'Spotify in monitor', 'monitor', 'monitor')}
+    ${row('spotifyMic', 'Spotify to mic', 'mic', 'mic')}
+    <div class="sp-mix-tip">If Spotify also plays through the headphones you monitor on, set Spotify's own output to another device so you don't hear it twice.</div>
+  </div>`;
+}
+
+function spotifyMixStatus() {
+  const s = spotifyAudioStatus;
+  const capturing = s?.state === 'capturing';
+  const pending = !s || s.state === 'starting' ? 'Connecting to Spotify…'
+    : s.state === 'waiting' ? 'Waiting for the Spotify app…'
+    : s.state === 'error' ? 'Error: ' + (s.error || 'capture failed') : '';
+  const monitorLive = monitorEnabled && !!outputBus?.monitorLive;
+  const mainLabel = selectedOutputId ? (audioDeviceLabels.output.get(selectedOutputId) || 'main output') : '';
+  const mic = !spotifyToMic ? 'Off'
+    : capturing ? (mainLabel ? 'Live into ' + mainLabel : 'Live, but main output is your speakers') : pending;
+  const monitor = !spotifyToMonitor ? 'Off'
+    : !monitorEnabled ? 'Turn on the mic monitor to hear it'
+    : capturing ? (monitorLive ? 'Live in your monitor' : 'Start the mic or a sound to open the monitor') : pending;
+  const micMonitor = monitorEnabled ? 'Mic and soundpad in the monitor' : 'Monitor is off';
+  const inMonitor = spotifyToMonitor && capturing && monitorLive;
+  return {
+    mic, monitor, micMonitor,
+    badge: inMonitor ? 'Spotify in monitor' : 'Spotify not in monitor',
+    badgeClass: inMonitor ? 'live' : '',
+  };
+}
+
+function renderSpotifyMixer() {
+  document.querySelectorAll('.sp-mixer-host').forEach(host => {
+    if (!host.firstElementChild) host.innerHTML = spMixerHtml();
+  });
+  const vals = {
+    micMonitor: typeof micMonitorLevel === 'number' ? micMonitorLevel : 100,
+    spotifyMonitor: spotifyMonitorLevel,
+    spotifyMic: spotifyMicLevel,
+  };
+  document.querySelectorAll('[data-mix]').forEach(i => {
+    const v = vals[i.dataset.mix];
+    if (document.activeElement !== i) i.value = v;
+    i.style.setProperty('--pct', (Number(i.value) / 150 * 100) + '%');
+  });
+  document.querySelectorAll('[data-mix-val]').forEach(el => { el.textContent = vals[el.dataset.mixVal] + '%'; });
+  const toggles = { micMonitor: monitorEnabled, monitor: spotifyToMonitor, mic: spotifyToMic };
+  document.querySelectorAll('[data-mix-toggle]').forEach(t => {
+    const on = !!toggles[t.dataset.mixToggle];
+    t.classList.toggle('on', on);
+    t.setAttribute('aria-pressed', String(on));
+  });
+  const st = spotifyMixStatus();
+  document.querySelectorAll('[data-mix-status]').forEach(el => {
+    const text = st[el.dataset.mixStatus] || '';
+    if (el.textContent !== text) el.textContent = text;
+  });
+  document.querySelectorAll('[data-mix-badge]').forEach(el => {
+    el.className = 'sp-badge' + (st.badgeClass ? ' ' + st.badgeClass : '');
+    if (el.textContent !== st.badge) el.textContent = st.badge;
+  });
+}
+
+function spMixToggle(which) {
+  if (which === 'micMonitor') toggleMonitor();
+  else if (which === 'monitor') toggleSpotifyToMonitor();
+  else if (which === 'mic') toggleSpotifyToMic();
+  renderSpotifyMixer();
+}
+
+/* ── wiring ── */
+
+function spOnView(view) {
+  if (view === 'sp-home') {
+    const el = document.getElementById('spHome');
+    if (el && (!el.dataset.loadedAt || Date.now() - Number(el.dataset.loadedAt) > 60000 || !el.innerHTML)) spRenderHome();
+  } else if (view === 'sp-search') {
+    const input = document.getElementById('spSearchInput');
+    setTimeout(() => input?.focus(), 60);
+    const results = document.getElementById('spSearchResults');
+    if (results && !results.innerHTML) spRunSearch(input?.value || '');
+  } else if (view === 'sp-library') {
+    spRenderLibrary();
+  } else if (view === 'sp-playlists') {
+    spRenderPlaylists();
+  } else if (view === 'sp-now') {
+    spQueueAt = 0;
+    spRenderNow();
+  }
+}
+
+function initSpotifyWeb() {
+  const shell = document.getElementById('studioShell');
+  document.addEventListener('click', e => {
+    const action = e.target.closest('[data-sp-action]');
+    if (action) { e.preventDefault(); spAction(action.dataset.spAction, action); return; }
+    const mix = e.target.closest('[data-mix-toggle]');
+    if (mix) { spMixToggle(mix.dataset.mixToggle); return; }
+    if (!shell || !shell.contains(e.target)) return;
+    const play = e.target.closest('[data-sp-play]');
+    if (play) { e.stopPropagation(); spPlayUri(play.dataset.spPlay); return; }
+    const heroPlay = e.target.closest('[data-sp-hero-play]');
+    if (heroPlay) {
+      if (heroPlay.dataset.spHeroPlay) spPlayUri(heroPlay.dataset.spHeroPlay);
+      else spPlayFromList('detail', 0);
+      return;
+    }
+    const row = e.target.closest('.sp-track[data-sp-track]');
+    if (row) {
+      const list = row.closest('[data-sp-list]');
+      if (list) spPlayFromList(list.dataset.spList, Number(row.dataset.spTrack));
+      return;
+    }
+    const open = e.target.closest('[data-sp-open]');
+    if (open) { spOpen(open.dataset.spOpen); return; }
+    const lib = e.target.closest('[data-sp-lib]');
+    if (lib) spRenderLibrary(lib.dataset.spLib);
+  });
+  document.addEventListener('input', e => {
+    const slider = e.target.closest?.('[data-mix]');
+    if (!slider) return;
+    const v = Number(slider.value);
+    if (slider.dataset.mix === 'micMonitor') setMicMonitorLevel(v);
+    else if (slider.dataset.mix === 'spotifyMonitor') setSpotifyMonitorLevel(v);
+    else setSpotifyMicLevel(v);
+  });
+  document.getElementById('spSearchInput')?.addEventListener('input', e => spSearchInput(e.target.value));
+  window.api?.onSpotifyWebChanged?.(() => spRefreshStatus());
+  renderSpotifyMixer();
+  setInterval(renderSpotifyMixer, 1000);
+  spRefreshStatus();
+}
+
+setTimeout(initSpotifyWeb, 0);
 
 function switchSubTab(subId) {
   document.querySelectorAll('.subtab-btn').forEach(b => b.classList.toggle('active', b.dataset.subtab === subId));
@@ -2806,7 +3497,7 @@ async function applySampleRate() {
   if (pitchWorkletPromise) await pitchWorkletPromise;
   if (wasMicOn) await toggleMic();
   rebuildSoundpad();
-  if (spotifyToMic) spotifyToMicSync();
+  if (spotifyToMic || spotifyToMonitor) spotifyToMicSync();
   showToast('Audio engine now at ' + Math.round(ctx.sampleRate) + ' Hz.', '');
   syncSampleRateUI();
 }
@@ -3495,11 +4186,19 @@ function tearDownOutputBus() {
   outputBus.audios.forEach(audio => {
     try { audio._disposed = true; audio.pause(); audio.removeAttribute('src'); audio.srcObject = null; audio.load(); } catch {}
   });
-  try { outputBus.input.disconnect(); } catch {}
-  try { outputBus.mainOnly?.disconnect(); } catch {}
+  ['input', 'mainOnly', 'monitorOnly', 'micMonitorGain', 'monitorMix'].forEach(k => {
+    try { outputBus[k]?.disconnect(); } catch {}
+  });
   outputBus = null;
 }
 
+// Routing:
+//   input (mic + soundpad) -> main output
+//                          -> micMonitorGain -> monitorMix -> monitor output
+//   mainOnly    (Spotify to mic)     -> main output only
+//   monitorOnly (Spotify in monitor) -> monitorMix -> monitor output
+// Every source has its own gain into each destination, so the monitor mix
+// and the call mix never mute or override each other.
 function ensureOutputBus(ctx) {
   const key = outputBusKey();
   if (outputBus && outputBus.ctx === ctx && outputBus.key === key) return outputBus;
@@ -3513,13 +4212,17 @@ function ensureOutputBus(ctx) {
     return g;
   };
   const input = makeGain();
-  // mainOnly reaches the main output but not the monitor: for sources the
-  // user already hears directly, such as Spotify sent to the mic.
   const mainOnly = makeGain();
+  const monitorOnly = makeGain();
+  const micMonitorGain = makeGain();
+  micMonitorGain.gain.value = (typeof micMonitorLevel === 'number' ? micMonitorLevel : 100) / 100;
+  const monitorMix = makeGain();
+  input.connect(micMonitorGain);
+  micMonitorGain.connect(monitorMix);
+  monitorOnly.connect(monitorMix);
   const audios = [];
-  let routed = false;
 
-  const makeSink = (sinkId, isMain) => {
+  const makeSink = (sinkId, role) => {
     const streamDest = ctx.createMediaStreamDestination();
     streamDest.channelCount = 2;
     streamDest.channelCountMode = 'explicit';
@@ -3527,22 +4230,21 @@ function ensureOutputBus(ctx) {
     const audio = new Audio();
     audio.srcObject = streamDest.stream;
     startOutputAudio(audio, sinkId);
-    input.connect(streamDest);
-    if (isMain) mainOnly.connect(streamDest);
+    if (role === 'main') { input.connect(streamDest); mainOnly.connect(streamDest); }
+    else monitorMix.connect(streamDest);
     audios.push(audio);
   };
 
-  if (selectedOutputId) { makeSink(selectedOutputId, true); routed = true; }
-  else { input.connect(ctx.destination); mainOnly.connect(ctx.destination); routed = true; }
+  if (selectedOutputId) makeSink(selectedOutputId, 'main');
+  else { input.connect(ctx.destination); mainOnly.connect(ctx.destination); }
 
+  let monitorLive = false;
   if (monitorEnabled && !monitorOutputDuplicatesMain()) {
-    if (selectedMonitorOutputId) makeSink(selectedMonitorOutputId, false);
-    else if (selectedOutputId) input.connect(ctx.destination);
+    if (selectedMonitorOutputId) { makeSink(selectedMonitorOutputId, 'monitor'); monitorLive = true; }
+    else if (selectedOutputId) { monitorMix.connect(ctx.destination); monitorLive = true; }
   }
 
-  if (!routed) input.connect(ctx.destination);
-
-  outputBus = { ctx, key, input, mainOnly, audios };
+  outputBus = { ctx, key, input, mainOnly, monitorOnly, micMonitorGain, monitorMix, monitorLive, audios };
   // Long-lived sources outside the mic and soundpad chains follow the bus
   // across rebuilds.
   if (typeof spotifyAudioReattach === 'function') spotifyAudioReattach();
@@ -6280,1225 +6982,9 @@ startOutputMeters();
 window.addEventListener('resize', () => { eqDrawGraph(); eqUpdateDots(); });
 window.addEventListener('beforeunload', () => { eqSaveSettings(); });
 
-// ── OBS Virtual Camera Tab ──
-let obsSources = JSON.parse(localStorage.getItem('obs-sources') || '[]');
-let obsCurrentIdx = -1;
-let obsLoop = false;
-let obsWebcamOn = false;
-let obsWebcamStream = null;
-let obsVcamActive = false;
-let obsProgressTimer = null;
-
-function obsSaveSources() { localStorage.setItem('obs-sources', JSON.stringify(obsSources)); }
-
-function obsFileUrl(filePath) {
-  if (!filePath) return '';
-  return 'file:///' + String(filePath).replace(/\\/g, '/').replace(/^\/+/, '');
-}
-
-async function obsAddVideo() {
-  const files = await api.selectVideoFiles();
-  if (!files || !files.length) return;
-  for (const f of files) {
-    obsSources.push({ name: f.name, path: f.path, type: 'file' });
-  }
-  obsSaveSources();
-  obsRenderSources();
-  showToast(`Added ${files.length} video(s)`, 'success');
-}
-
-function obsRenderSources() {
-  const list = document.getElementById('obsSourceList');
-  const empty = document.getElementById('obsSourceEmpty');
-  if (!obsSources.length) { list.innerHTML = ''; empty.style.display = ''; return; }
-  empty.style.display = 'none';
-  list.innerHTML = obsSources.map((s, i) => `
-    <div class="soundpad-tile${i === obsCurrentIdx ? ' active' : ''}" ondblclick="obsPlaySource(${i})">
-      <span class="soundpad-name" title="${esc(s.path || s.name)}">${esc(s.name)}</span>
-      <div class="soundpad-controls">
-        <button class="soundpad-ctrl" onclick="obsPlaySource(${i})" title="Play">&#9654;</button>
-        <button class="soundpad-ctrl danger" onclick="obsRemoveSource(${i})" title="Remove">&#x2715;</button>
-      </div>
-    </div>
-  `).join('');
-}
-
-function obsRemoveSource(i) {
-  if (i === obsCurrentIdx) obsStop();
-  obsSources.splice(i, 1);
-  if (obsCurrentIdx >= obsSources.length) obsCurrentIdx = -1;
-  obsSaveSources();
-  obsRenderSources();
-}
-
-function obsPlaySource(i) {
-  if (i < 0 || i >= obsSources.length) return;
-  obsCurrentIdx = i;
-  const src = obsSources[i];
-  const vid = document.getElementById('obsPreview');
-  const emptyEl = document.getElementById('obsPreviewEmpty');
-  if (obsWebcamOn) obsDisableWebcam();
-  vid.src = obsFileUrl(src.path);
-  vid.muted = false;
-  vid.volume = (document.getElementById('obsVolume')?.value || 100) / 100;
-  vid.loop = obsLoop;
-  vid.play().catch(() => {});
-  emptyEl.style.display = 'none';
-  document.getElementById('obsPlayBtn').innerHTML = '&#10074;&#10074;';
-  obsRenderSources();
-  obsStartProgress();
-}
-
-function obsTogglePlay() {
-  const vid = document.getElementById('obsPreview');
-  if (!vid.src || vid.src === location.href) return;
-  if (vid.paused) { vid.play(); document.getElementById('obsPlayBtn').innerHTML = '&#10074;&#10074;'; }
-  else { vid.pause(); document.getElementById('obsPlayBtn').innerHTML = '&#9654;'; }
-}
-
-function obsStop() {
-  const vid = document.getElementById('obsPreview');
-  vid.pause();
-  vid.removeAttribute('src');
-  vid.load();
-  document.getElementById('obsPreviewEmpty').style.display = '';
-  document.getElementById('obsPlayBtn').innerHTML = '&#9654;';
-  document.getElementById('obsCurrentTime').textContent = '0:00';
-  document.getElementById('obsDuration').textContent = '0:00';
-  document.getElementById('obsSeekBar').value = 0;
-  obsCurrentIdx = -1;
-  obsStopProgress();
-  obsRenderSources();
-}
-
-function obsStartProgress() {
-  obsStopProgress();
-  obsProgressTimer = setInterval(() => {
-    const vid = document.getElementById('obsPreview');
-    if (!vid.duration) return;
-    document.getElementById('obsCurrentTime').textContent = fmtTime(vid.currentTime);
-    document.getElementById('obsDuration').textContent = fmtTime(vid.duration);
-    document.getElementById('obsSeekBar').value = (vid.currentTime / vid.duration) * 1000;
-  }, 250);
-}
-
-function obsStopProgress() { if (obsProgressTimer) { clearInterval(obsProgressTimer); obsProgressTimer = null; } }
-
-function fmtTime(s) {
-  if (!s || !isFinite(s)) return '0:00';
-  const m = Math.floor(s / 60);
-  const sec = Math.floor(s % 60);
-  return m + ':' + String(sec).padStart(2, '0');
-}
-
-function obsSeekPreview(val) {
-  const vid = document.getElementById('obsPreview');
-  if (vid.duration) document.getElementById('obsCurrentTime').textContent = fmtTime((val / 1000) * vid.duration);
-}
-
-function obsSeekTo(val) {
-  const vid = document.getElementById('obsPreview');
-  if (vid.duration) vid.currentTime = (val / 1000) * vid.duration;
-}
-
-function obsSetVolume(val) {
-  const vid = document.getElementById('obsPreview');
-  vid.volume = val / 100;
-}
-
-function obsToggleLoop() {
-  obsLoop = !obsLoop;
-  const btn = document.getElementById('obsLoopToggle');
-  btn.classList.toggle('on', obsLoop);
-  const vid = document.getElementById('obsPreview');
-  vid.loop = obsLoop;
-}
-
-async function obsRefreshCameras() {
-  try {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const cams = devices.filter(d => d.kind === 'videoinput');
-    const sel = document.getElementById('obsCameraSelect');
-    sel.innerHTML = cams.map(c => `<option value="${c.deviceId}">${esc(c.label || 'Camera ' + c.deviceId.slice(0,6))}</option>`).join('');
-  } catch (e) { showToast('Could not list cameras: ' + e.message, 'error'); }
-}
-
-async function obsToggleWebcam() {
-  if (obsWebcamOn) { obsDisableWebcam(); return; }
-  try {
-    const camId = document.getElementById('obsCameraSelect').value;
-    const constraints = { video: camId ? { deviceId: { exact: camId } } : true, audio: false };
-    obsWebcamStream = await navigator.mediaDevices.getUserMedia(constraints);
-    const vid = document.getElementById('obsPreview');
-    vid.pause();
-    vid.srcObject = obsWebcamStream;
-    vid.muted = true;
-    vid.play();
-    document.getElementById('obsPreviewEmpty').style.display = 'none';
-    obsWebcamOn = true;
-    document.getElementById('obsWebcamToggle').classList.add('on');
-    obsCurrentIdx = -1;
-    obsRenderSources();
-  } catch (e) { showToast('Webcam error: ' + e.message, 'error'); }
-}
-
-function obsDisableWebcam() {
-  if (obsWebcamStream) { obsWebcamStream.getTracks().forEach(t => t.stop()); obsWebcamStream = null; }
-  const vid = document.getElementById('obsPreview');
-  vid.srcObject = null;
-  document.getElementById('obsPreviewEmpty').style.display = '';
-  obsWebcamOn = false;
-  document.getElementById('obsWebcamToggle').classList.remove('on');
-}
-
-async function obsSwitchCamera() {
-  if (obsWebcamOn) { obsDisableWebcam(); await obsToggleWebcam(); }
-}
-
-let obsVcamInstalled = false;
-let obsVcamTimer = null;
-let obsVcamCanvas = null;
-let obsVcamCtx = null;
-const VCAM_W = 1280, VCAM_H = 720;
-
-function obsEnsureVcamCanvas() {
-  if (!obsVcamCanvas) {
-    obsVcamCanvas = document.createElement('canvas');
-    obsVcamCanvas.width = VCAM_W;
-    obsVcamCanvas.height = VCAM_H;
-    obsVcamCtx = obsVcamCanvas.getContext('2d', { willReadFrequently: true });
-  }
-}
-
-function obsStopVcamFrames() {
-  if (obsVcamTimer) {
-    clearInterval(obsVcamTimer);
-    obsVcamTimer = null;
-  }
-}
-
-function obsStartVcamFrames() {
-  obsEnsureVcamCanvas();
-  obsStopVcamFrames();
-  const vid = document.getElementById('obsPreview');
-  let sending = false;
-
-  obsVcamTimer = setInterval(async () => {
-    if (!obsVcamActive || sending) return;
-    try {
-      obsVcamCtx.fillStyle = '#000';
-      obsVcamCtx.fillRect(0, 0, VCAM_W, VCAM_H);
-
-      if (vid && vid.readyState >= 2 && (vid.videoWidth || vid.clientWidth)) {
-        const srcW = vid.videoWidth || VCAM_W;
-        const srcH = vid.videoHeight || VCAM_H;
-        const scale = Math.min(VCAM_W / srcW, VCAM_H / srcH);
-        const drawW = Math.round(srcW * scale);
-        const drawH = Math.round(srcH * scale);
-        const dx = Math.round((VCAM_W - drawW) / 2);
-        const dy = Math.round((VCAM_H - drawH) / 2);
-        obsVcamCtx.drawImage(vid, dx, dy, drawW, drawH);
-      }
-
-      sending = true;
-      const rgba = obsVcamCtx.getImageData(0, 0, VCAM_W, VCAM_H).data;
-      const res = await api.vcamSendFrame(rgba.buffer);
-      sending = false;
-      if (res && res.error) {
-        obsStopVcamFrames();
-        obsVcamActive = false;
-        document.getElementById('obsVcamBtn').className = 'mic-btn start';
-        document.getElementById('obsVcamBtn').textContent = 'Start Virtual Camera';
-        document.getElementById('obsVcamStatus').textContent = 'Frame send failed';
-        document.getElementById('obsVcamStatus').style.color = 'var(--red)';
-        showToast('VCam frame failed: ' + res.error, 'error');
-      }
-    } catch (e) {
-      sending = false;
-    }
-  }, 1000 / 30);
-}
-
-async function obsInstallVcam() {
-  const status = document.getElementById('obsVcamStatus');
-  status.textContent = 'Installing virtual camera driver...';
-  status.style.color = 'var(--text-muted)';
-  const res = await api.vcamInstall();
-  if (res && res.error) {
-    showToast('VCam install failed: ' + res.error, 'error');
-    status.textContent = 'Install failed — run as Admin';
-    status.style.color = 'var(--red, #ef4444)';
-    return false;
-  }
-  obsVcamInstalled = true;
-  showToast('Virtual camera driver registered!', 'success');
-  return true;
-}
-
-async function obsToggleVcam() {
-  const btn = document.getElementById('obsVcamBtn');
-  const status = document.getElementById('obsVcamStatus');
-
-  if (obsVcamActive) {
-    obsVcamActive = false;
-    await api.vcamStop();
-    btn.className = 'mic-btn start'; btn.textContent = 'Start Virtual Camera';
-    status.textContent = 'Not active';
-    status.style.color = '';
-    return;
-  }
-
-  // First time: register OBS virtual camera
-  if (!obsVcamInstalled) {
-    const ok = await obsInstallVcam();
-    if (!ok) return;
-  }
-
-  // Connect to OBS WebSocket and start virtual camera
-  status.textContent = 'Connecting to OBS...';
-  const res = await api.vcamStart();
-  if (res && res.error) {
-    showToast('VCam start failed: ' + res.error, 'error');
-    status.textContent = 'Not connected — make sure OBS is running';
-    status.style.color = 'var(--red)';
-    return;
-  }
-
-  obsVcamActive = true;
-  btn.className = 'mic-btn stop'; btn.textContent = 'Stop Virtual Camera';
-  status.textContent = 'Virtual camera active — select "OBS Virtual Camera" in your app';
-  status.style.color = 'var(--green)';
-  showToast('OBS Virtual Camera started! Select "OBS Virtual Camera" in Discord/Zoom.', 'success');
-}
-
-// Clean override: use the built-in Custom Mic virtual camera instead of OBS WebSocket.
-async function obsToggleVcam() {
-  const btn = document.getElementById('obsVcamBtn');
-  const status = document.getElementById('obsVcamStatus');
-
-  if (obsVcamActive) {
-    obsVcamActive = false;
-    obsStopVcamFrames();
-    await api.vcamStop();
-    btn.className = 'mic-btn start';
-    btn.textContent = 'Start Virtual Camera';
-    status.textContent = 'Not active';
-    status.style.color = '';
-    return;
-  }
-
-  if (!obsVcamInstalled) {
-    const ok = await obsInstallVcam();
-    if (!ok) return;
-  }
-
-  status.textContent = 'Starting camera feed...';
-  status.style.color = 'var(--text-muted)';
-  const res = await api.vcamStart(VCAM_W, VCAM_H);
-  if (res && res.error) {
-    showToast('VCam start failed: ' + res.error, 'error');
-    status.textContent = 'Camera failed to start';
-    status.style.color = 'var(--red)';
-    return;
-  }
-
-  obsVcamActive = true;
-  obsStartVcamFrames();
-  btn.className = 'mic-btn stop';
-  btn.textContent = 'Stop Virtual Camera';
-  status.textContent = 'Virtual camera active — select "Custom Mic Virtual Camera" in your app';
-  status.style.color = 'var(--green)';
-  showToast('Custom Mic Virtual Camera started! Select it in Discord/Zoom.', 'success');
-}
-
-// Init OBS tab
-obsRenderSources();
-obsRefreshCameras();
-
-// Handle video end for non-loop: play next
-document.getElementById('obsPreview').addEventListener('ended', () => {
-  if (obsLoop) return;
-  if (obsCurrentIdx >= 0 && obsCurrentIdx < obsSources.length - 1) {
-    obsPlaySource(obsCurrentIdx + 1);
-  } else {
-    obsStop();
-  }
-});
 </script>
 
 <script>
-// ── Screen Recorder ──
-(function() {
-  let recMediaRecorder = null;
-  let recStream = null;
-  let recChunks = [];
-  let recState = 'idle'; // idle | recording | paused
-  let recTimerInterval = null;
-  let recSeconds = 0;
-  let recSelectedSourceId = null;
-  let recLastFilePath = null;
-
-  // Load saved settings
-  function recLoadSettings() {
-    const fields = ['recResolution','recFps','recBitrate','recFormat','recCodec','recAudioSource','recAudioBitrate','recFilenamePattern','recOutputDir','recCountdownSec'];
-    fields.forEach(id => {
-      const v = localStorage.getItem('recorder-' + id);
-      if (v) { const el = document.getElementById(id); if (el) el.value = v; }
-    });
-    ['recCursorToggle','recCountdownToggle'].forEach(id => {
-      const v = localStorage.getItem('recorder-' + id);
-      const el = document.getElementById(id);
-      if (el && v !== null) el.classList.toggle('active', v === '1');
-    });
-    if (document.getElementById('recBitrate').value) {
-      document.getElementById('recBitrateVal').textContent = document.getElementById('recBitrate').value;
-    }
-  }
-
-  function recSaveSettings() {
-    ['recResolution','recFps','recBitrate','recFormat','recCodec','recAudioSource','recAudioBitrate','recFilenamePattern','recOutputDir','recCountdownSec'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) localStorage.setItem('recorder-' + id, el.value);
-    });
-    ['recCursorToggle','recCountdownToggle'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) localStorage.setItem('recorder-' + id, el.classList.contains('active') ? '1' : '0');
-    });
-  }
-
-  // Source selection
-  window.recRefreshSources = async function() {
-    const type = document.getElementById('recSourceType').value;
-    const grid = document.getElementById('recSourceGrid');
-    grid.innerHTML = '<div style="color:var(--text-muted);font-size:11px;padding:8px">Loading sources...</div>';
-    try {
-      const sources = await window.api.recorderGetSources(type);
-      grid.innerHTML = '';
-      sources.forEach(s => {
-        const card = document.createElement('div');
-        card.className = 'recorder-source-card' + (s.id === recSelectedSourceId ? ' selected' : '');
-        card.innerHTML = '<img src="' + s.thumbnail + '" alt=""><span>' + s.name + '</span>';
-        card.onclick = () => {
-          grid.querySelectorAll('.recorder-source-card').forEach(c => c.classList.remove('selected'));
-          card.classList.add('selected');
-          recSelectedSourceId = s.id;
-          recStartPreview(s.id);
-        };
-        grid.appendChild(card);
-      });
-      if (sources.length === 0) grid.innerHTML = '<div style="color:var(--text-muted);font-size:11px;padding:8px">No sources found</div>';
-    } catch (e) {
-      grid.innerHTML = '<div style="color:var(--red);font-size:11px;padding:8px">Error loading sources</div>';
-    }
-  };
-
-  async function recStartPreview(sourceId) {
-    if (recStream && recState === 'idle') {
-      recStream.getTracks().forEach(t => t.stop());
-    }
-    if (recState !== 'idle') return;
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: { mandatory: { chromeMediaSource: 'desktop', chromeMediaSourceId: sourceId } }
-      });
-      document.getElementById('recPreview').srcObject = stream;
-      recStream = stream;
-    } catch (e) { console.error('Preview error:', e); }
-  }
-
-  // Timer
-  function recUpdateTimer() {
-    recSeconds++;
-    const h = String(Math.floor(recSeconds / 3600)).padStart(2, '0');
-    const m = String(Math.floor((recSeconds % 3600) / 60)).padStart(2, '0');
-    const s = String(recSeconds % 60).padStart(2, '0');
-    document.getElementById('recTimer').textContent = h + ':' + m + ':' + s;
-  }
-
-  function recResetTimer() {
-    recSeconds = 0;
-    document.getElementById('recTimer').textContent = '00:00:00';
-  }
-
-  // Build filename
-  function recBuildFilename() {
-    const pattern = document.getElementById('recFilenamePattern').value || 'recording_{date}_{time}';
-    const now = new Date();
-    const date = now.toISOString().slice(0, 10);
-    const time = now.toTimeString().slice(0, 8).replace(/:/g, '-');
-    const ext = document.getElementById('recFormat').value;
-    let name = pattern.replace('{date}', date).replace('{time}', time).replace('{n}', Date.now());
-    return name + '.' + ext;
-  }
-
-  // Get MIME type
-  function recGetMimeType() {
-    const format = document.getElementById('recFormat').value;
-    const codec = document.getElementById('recCodec').value;
-    const codecMap = { vp9: 'vp9', vp8: 'vp8', h264: 'avc1.42E01E' };
-    const mimeBase = format === 'mp4' ? 'video/mp4' : format === 'mkv' ? 'video/x-matroska' : 'video/webm';
-    const full = mimeBase + ';codecs=' + (codecMap[codec] || 'vp9');
-    if (MediaRecorder.isTypeSupported(full)) return full;
-    if (MediaRecorder.isTypeSupported(mimeBase)) return mimeBase;
-    return 'video/webm';
-  }
-
-  // Record toggle
-  window.recToggleRecord = async function() {
-    if (recState === 'recording' || recState === 'paused') {
-      recStop();
-      return;
-    }
-    if (!recSelectedSourceId) {
-      alert('Select a source first');
-      return;
-    }
-    recSaveSettings();
-
-    // Countdown
-    if (document.getElementById('recCountdownToggle').classList.contains('active')) {
-      let cd = parseInt(document.getElementById('recCountdownSec').value) || 3;
-      const statusText = document.getElementById('recStatusText');
-      while (cd > 0) {
-        statusText.textContent = 'Starting in ' + cd + '...';
-        await new Promise(r => setTimeout(r, 1000));
-        cd--;
-      }
-    }
-
-    try {
-      // Get video stream
-      const videoConstraints = { mandatory: { chromeMediaSource: 'desktop', chromeMediaSourceId: recSelectedSourceId } };
-      const res = document.getElementById('recResolution').value;
-      if (res !== 'source') {
-        const [w, h] = res.split('x').map(Number);
-        videoConstraints.mandatory.maxWidth = w;
-        videoConstraints.mandatory.maxHeight = h;
-      }
-      const fps = parseInt(document.getElementById('recFps').value) || 30;
-      videoConstraints.mandatory.maxFrameRate = fps;
-
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: videoConstraints });
-
-      // Audio
-      const audioSrc = document.getElementById('recAudioSource').value;
-      if (audioSrc !== 'none') {
-        try {
-          let audioStream;
-          if (audioSrc === 'system' || audioSrc === 'both') {
-            audioStream = await navigator.mediaDevices.getUserMedia({
-              audio: { mandatory: { chromeMediaSource: 'desktop', chromeMediaSourceId: recSelectedSourceId } },
-              video: { mandatory: { chromeMediaSource: 'desktop', chromeMediaSourceId: recSelectedSourceId } }
-            });
-            audioStream.getVideoTracks().forEach(t => t.stop());
-          }
-          if (audioSrc === 'mic' || audioSrc === 'both') {
-            const micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-            if (audioStream) {
-              micStream.getAudioTracks().forEach(t => audioStream.addTrack(t));
-            } else {
-              audioStream = micStream;
-            }
-          }
-          if (audioStream) {
-            audioStream.getAudioTracks().forEach(t => stream.addTrack(t));
-          }
-        } catch (e) { console.warn('Audio capture failed:', e); }
-      }
-
-      recStream = stream;
-      document.getElementById('recPreview').srcObject = stream;
-
-      const bitrate = parseInt(document.getElementById('recBitrate').value) * 1000000;
-      const audioBitrate = parseInt(document.getElementById('recAudioBitrate').value) * 1000;
-      const mimeType = recGetMimeType();
-
-      recChunks = [];
-      recMediaRecorder = new MediaRecorder(stream, {
-        mimeType,
-        videoBitsPerSecond: bitrate,
-        audioBitsPerSecond: audioBitrate
-      });
-
-      recMediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recChunks.push(e.data); };
-      recMediaRecorder.onstop = () => recOnStop();
-      recMediaRecorder.start(1000);
-
-      recState = 'recording';
-      recResetTimer();
-      recTimerInterval = setInterval(recUpdateTimer, 1000);
-      recUpdateUI();
-    } catch (e) {
-      alert('Recording failed: ' + e.message);
-      console.error(e);
-    }
-  };
-
-  window.recTogglePause = function() {
-    if (!recMediaRecorder) return;
-    if (recState === 'recording') {
-      recMediaRecorder.pause();
-      recState = 'paused';
-      clearInterval(recTimerInterval);
-    } else if (recState === 'paused') {
-      recMediaRecorder.resume();
-      recState = 'recording';
-      recTimerInterval = setInterval(recUpdateTimer, 1000);
-    }
-    recUpdateUI();
-  };
-
-  window.recStop = function() {
-    if (recMediaRecorder && recMediaRecorder.state !== 'inactive') {
-      recMediaRecorder.stop();
-    }
-    clearInterval(recTimerInterval);
-    recState = 'idle';
-    recUpdateUI();
-  };
-
-  async function recOnStop() {
-    const blob = new Blob(recChunks, { type: recGetMimeType() });
-    const outputDir = document.getElementById('recOutputDir').value;
-    if (!outputDir) {
-      alert('Please select an output folder first.');
-      return;
-    }
-    const filename = outputDir + '\\' + recBuildFilename();
-    const buffer = await blob.arrayBuffer();
-    const result = await window.api.recorderSaveRecording(buffer, filename);
-    if (result && result.ok) {
-      recLastFilePath = result.path;
-      const sizeMB = (result.size / (1024 * 1024)).toFixed(1);
-      document.getElementById('recLastInfo').textContent = recBuildFilename() + ' (' + sizeMB + ' MB)';
-      document.getElementById('recOpenFile').disabled = false;
-      document.getElementById('recOpenFolder').disabled = false;
-    } else if (result && result.error) {
-      alert('Save failed: ' + result.error);
-    }
-    // Stop all tracks
-    if (recStream) {
-      recStream.getTracks().forEach(t => t.stop());
-      recStream = null;
-    }
-    document.getElementById('recPreview').srcObject = null;
-  }
-
-  window.recScreenshot = async function() {
-    const video = document.getElementById('recPreview');
-    if (!video.srcObject) { alert('No active preview'); return; }
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext('2d').drawImage(video, 0, 0);
-    canvas.toBlob(async (blob) => {
-      const outputDir = document.getElementById('recOutputDir').value;
-      if (!outputDir) { alert('Select an output folder first'); return; }
-      const now = new Date();
-      const fname = 'screenshot_' + now.toISOString().slice(0,10) + '_' + now.toTimeString().slice(0,8).replace(/:/g,'-') + '.png';
-      const buffer = await blob.arrayBuffer();
-      await window.api.recorderSaveRecording(buffer, outputDir + '\\' + fname);
-    }, 'image/png');
-  };
-
-  window.recSelectOutputDir = async function() {
-    const dir = await window.api.recorderSelectOutputDir();
-    if (dir) {
-      document.getElementById('recOutputDir').value = dir;
-      recSaveSettings();
-    }
-  };
-
-  window.recOpenLastFile = function() {
-    if (recLastFilePath) window.api.recorderOpenFile(recLastFilePath);
-  };
-
-  window.recOpenLastFolder = function() {
-    if (recLastFilePath) window.api.recorderOpenFolder(recLastFilePath);
-  };
-
-  function recUpdateUI() {
-    const btn = document.getElementById('recBtnMain');
-    const pauseBtn = document.getElementById('recPauseBtn');
-    const stopBtn = document.getElementById('recStopBtn');
-    const timer = document.getElementById('recTimer');
-    const dot = document.getElementById('recStatusDot');
-    const statusText = document.getElementById('recStatusText');
-
-    btn.classList.toggle('recording', recState === 'recording' || recState === 'paused');
-    timer.classList.toggle('recording', recState === 'recording');
-    pauseBtn.disabled = recState === 'idle';
-    stopBtn.disabled = recState === 'idle';
-
-    dot.className = 'recorder-status-dot';
-    if (recState === 'recording') { dot.classList.add('recording'); statusText.textContent = 'Recording'; }
-    else if (recState === 'paused') { dot.classList.add('paused'); statusText.textContent = 'Paused'; }
-    else { statusText.textContent = 'Idle'; }
-
-    pauseBtn.innerHTML = recState === 'paused' ? '&#9654;' : '&#10074;&#10074;';
-    pauseBtn.title = recState === 'paused' ? 'Resume' : 'Pause';
-  }
-
-  // Hotkey capture
-  window.recCaptureHotkey = function(input) {
-    input.value = 'Press a key...';
-    input.onkeydown = function(e) {
-      e.preventDefault();
-      const parts = [];
-      if (e.ctrlKey) parts.push('Ctrl');
-      if (e.altKey) parts.push('Alt');
-      if (e.shiftKey) parts.push('Shift');
-      if (!['Control','Alt','Shift','Meta'].includes(e.key)) parts.push(e.key.toUpperCase());
-      input.value = parts.join('+');
-      localStorage.setItem('recorder-' + input.id, input.value);
-      input.onkeydown = null;
-      input.blur();
-    };
-  };
-
-  // Load hotkeys
-  ['recHkRecord','recHkPause','recHkScreenshot'].forEach(id => {
-    const v = localStorage.getItem('recorder-' + id);
-    if (v) document.getElementById(id).value = v;
-  });
-
-  // Init
-  recLoadSettings();
-  // Auto-refresh sources when tab is shown
-  const origSwitch = window.switchTab;
-  if (origSwitch) {
-    window.switchTab = function(tabId) {
-      origSwitch(tabId);
-      if (tabId === 'recorder') recRefreshSources();
-    };
-  }
-})();
-
-// ── Voicemod ──
-const voicemodPresets = {
-  'Clean': {pitch:0,formant:0,reverbMix:0,reverbSize:50,reverbDamp:50,delayTime:0,delayFeedback:0,delayMix:0,distAmount:0,distMix:0,compThreshold:-24,compRatio:1,gateThreshold:-60,gateFloor:-90,eqLow:0,eqMid:0,eqHigh:0,tremSpeed:0,tremDepth:0,chorusRate:0,chorusDepth:0,chorusMix:0,flangerRate:0,flangerDepth:0,flangerFeedback:0,bitDepth:16,sampleRate:44100},
-  'Baby': {pitch:4,formant:3,reverbMix:0,reverbSize:10,reverbDamp:50,delayTime:0,delayFeedback:0,delayMix:0,distAmount:0,distMix:0,compThreshold:-20,compRatio:2,gateThreshold:-50,gateFloor:-80,eqLow:-2,eqMid:2,eqHigh:3,tremSpeed:0,tremDepth:0,chorusRate:0,chorusDepth:0,chorusMix:0,flangerRate:0,flangerDepth:0,flangerFeedback:0,bitDepth:16,sampleRate:44100},
-  'Deep': {pitch:-8,formant:-4,reverbMix:10,reverbSize:30,reverbDamp:40,delayTime:0,delayFeedback:0,delayMix:0,distAmount:0,distMix:0,compThreshold:-15,compRatio:4,gateThreshold:-50,gateFloor:-80,eqLow:8,eqMid:-2,eqHigh:-4,tremSpeed:0,tremDepth:0,chorusRate:0,chorusDepth:0,chorusMix:0,flangerRate:0,flangerDepth:0,flangerFeedback:0,bitDepth:16,sampleRate:44100},
-  'Robot': {pitch:0,formant:0,reverbMix:15,reverbSize:10,reverbDamp:80,delayTime:20,delayFeedback:30,delayMix:25,distAmount:30,distMix:40,compThreshold:-10,compRatio:8,gateThreshold:-40,gateFloor:-70,eqLow:-4,eqMid:6,eqHigh:2,tremSpeed:8,tremDepth:30,chorusRate:5,chorusDepth:40,chorusMix:30,flangerRate:3,flangerDepth:50,flangerFeedback:60,bitDepth:8,sampleRate:22050},
-  'Demon': {pitch:-18,formant:-8,reverbMix:50,reverbSize:80,reverbDamp:30,delayTime:80,delayFeedback:30,delayMix:20,distAmount:60,distMix:50,compThreshold:-5,compRatio:10,gateThreshold:-45,gateFloor:-75,eqLow:10,eqMid:-4,eqHigh:-6,tremSpeed:2,tremDepth:15,chorusRate:0,chorusDepth:0,chorusMix:0,flangerRate:0,flangerDepth:0,flangerFeedback:0,bitDepth:16,sampleRate:44100},
-  'Chipmunk': {pitch:20,formant:10,reverbMix:5,reverbSize:10,reverbDamp:60,delayTime:0,delayFeedback:0,delayMix:0,distAmount:0,distMix:0,compThreshold:-20,compRatio:3,gateThreshold:-50,gateFloor:-80,eqLow:-4,eqMid:2,eqHigh:6,tremSpeed:0,tremDepth:0,chorusRate:0,chorusDepth:0,chorusMix:0,flangerRate:0,flangerDepth:0,flangerFeedback:0,bitDepth:16,sampleRate:44100},
-  'Ghost': {pitch:-3,formant:-2,reverbMix:80,reverbSize:90,reverbDamp:20,delayTime:200,delayFeedback:40,delayMix:30,distAmount:0,distMix:0,compThreshold:-30,compRatio:2,gateThreshold:-60,gateFloor:-90,eqLow:-6,eqMid:-2,eqHigh:4,tremSpeed:1,tremDepth:20,chorusRate:0.5,chorusDepth:30,chorusMix:20,flangerRate:0,flangerDepth:0,flangerFeedback:0,bitDepth:16,sampleRate:44100},
-  'Alien': {pitch:5,formant:8,reverbMix:30,reverbSize:40,reverbDamp:50,delayTime:50,delayFeedback:40,delayMix:25,distAmount:10,distMix:15,compThreshold:-15,compRatio:4,gateThreshold:-50,gateFloor:-80,eqLow:2,eqMid:4,eqHigh:6,tremSpeed:4,tremDepth:25,chorusRate:3,chorusDepth:50,chorusMix:35,flangerRate:5,flangerDepth:70,flangerFeedback:60,bitDepth:16,sampleRate:44100},
-  'Megaphone': {pitch:0,formant:0,reverbMix:5,reverbSize:5,reverbDamp:90,delayTime:0,delayFeedback:0,delayMix:0,distAmount:25,distMix:30,compThreshold:-5,compRatio:12,gateThreshold:-40,gateFloor:-70,eqLow:-10,eqMid:8,eqHigh:-8,tremSpeed:0,tremDepth:0,chorusRate:0,chorusDepth:0,chorusMix:0,flangerRate:0,flangerDepth:0,flangerFeedback:0,bitDepth:16,sampleRate:44100},
-  'Cave': {pitch:0,formant:0,reverbMix:90,reverbSize:95,reverbDamp:15,delayTime:300,delayFeedback:50,delayMix:40,distAmount:0,distMix:0,compThreshold:-20,compRatio:3,gateThreshold:-55,gateFloor:-85,eqLow:4,eqMid:-2,eqHigh:-4,tremSpeed:0,tremDepth:0,chorusRate:0,chorusDepth:0,chorusMix:0,flangerRate:0,flangerDepth:0,flangerFeedback:0,bitDepth:16,sampleRate:44100},
-  'Telephone': {pitch:0,formant:0,reverbMix:0,reverbSize:10,reverbDamp:80,delayTime:0,delayFeedback:0,delayMix:0,distAmount:15,distMix:20,compThreshold:-10,compRatio:6,gateThreshold:-40,gateFloor:-70,eqLow:-12,eqMid:8,eqHigh:-12,tremSpeed:0,tremDepth:0,chorusRate:0,chorusDepth:0,chorusMix:0,flangerRate:0,flangerDepth:0,flangerFeedback:0,bitDepth:12,sampleRate:8000},
-  'Underwater': {pitch:-2,formant:-1,reverbMix:40,reverbSize:50,reverbDamp:10,delayTime:100,delayFeedback:20,delayMix:15,distAmount:0,distMix:0,compThreshold:-20,compRatio:3,gateThreshold:-55,gateFloor:-85,eqLow:4,eqMid:-6,eqHigh:-12,tremSpeed:3,tremDepth:50,chorusRate:1,chorusDepth:40,chorusMix:30,flangerRate:0.5,flangerDepth:30,flangerFeedback:20,bitDepth:16,sampleRate:44100},
-  'Radio': {pitch:0,formant:0,reverbMix:5,reverbSize:10,reverbDamp:70,delayTime:0,delayFeedback:0,delayMix:0,distAmount:20,distMix:25,compThreshold:-8,compRatio:8,gateThreshold:-40,gateFloor:-70,eqLow:-10,eqMid:6,eqHigh:-6,tremSpeed:0,tremDepth:0,chorusRate:0,chorusDepth:0,chorusMix:0,flangerRate:0,flangerDepth:0,flangerFeedback:0,bitDepth:14,sampleRate:22050},
-  'Helium': {pitch:24,formant:12,reverbMix:5,reverbSize:10,reverbDamp:60,delayTime:0,delayFeedback:0,delayMix:0,distAmount:0,distMix:0,compThreshold:-20,compRatio:3,gateThreshold:-50,gateFloor:-80,eqLow:-6,eqMid:4,eqHigh:8,tremSpeed:0,tremDepth:0,chorusRate:0,chorusDepth:0,chorusMix:0,flangerRate:0,flangerDepth:0,flangerFeedback:0,bitDepth:16,sampleRate:44100},
-  'Giant': {pitch:-24,formant:-10,reverbMix:30,reverbSize:70,reverbDamp:30,delayTime:50,delayFeedback:15,delayMix:10,distAmount:10,distMix:15,compThreshold:-10,compRatio:6,gateThreshold:-45,gateFloor:-75,eqLow:12,eqMid:-4,eqHigh:-8,tremSpeed:0,tremDepth:0,chorusRate:0,chorusDepth:0,chorusMix:0,flangerRate:0,flangerDepth:0,flangerFeedback:0,bitDepth:16,sampleRate:44100},
-  'Whisperer': {pitch:-1,formant:0,reverbMix:60,reverbSize:70,reverbDamp:40,delayTime:100,delayFeedback:20,delayMix:15,distAmount:0,distMix:0,compThreshold:-35,compRatio:2,gateThreshold:-65,gateFloor:-95,eqLow:-4,eqMid:2,eqHigh:6,tremSpeed:0,tremDepth:0,chorusRate:0.3,chorusDepth:15,chorusMix:10,flangerRate:0,flangerDepth:0,flangerFeedback:0,bitDepth:16,sampleRate:44100},
-  'Echo': {pitch:0,formant:0,reverbMix:20,reverbSize:30,reverbDamp:50,delayTime:400,delayFeedback:60,delayMix:50,distAmount:0,distMix:0,compThreshold:-20,compRatio:3,gateThreshold:-50,gateFloor:-80,eqLow:0,eqMid:0,eqHigh:0,tremSpeed:0,tremDepth:0,chorusRate:0,chorusDepth:0,chorusMix:0,flangerRate:0,flangerDepth:0,flangerFeedback:0,bitDepth:16,sampleRate:44100},
-  'Metallic': {pitch:0,formant:3,reverbMix:25,reverbSize:20,reverbDamp:70,delayTime:15,delayFeedback:50,delayMix:20,distAmount:20,distMix:25,compThreshold:-12,compRatio:5,gateThreshold:-45,gateFloor:-75,eqLow:-2,eqMid:8,eqHigh:4,tremSpeed:0,tremDepth:0,chorusRate:0,chorusDepth:0,chorusMix:0,flangerRate:4,flangerDepth:60,flangerFeedback:70,bitDepth:16,sampleRate:44100},
-  'Stadium': {pitch:0,formant:0,reverbMix:85,reverbSize:100,reverbDamp:10,delayTime:500,delayFeedback:45,delayMix:35,distAmount:0,distMix:0,compThreshold:-15,compRatio:4,gateThreshold:-50,gateFloor:-80,eqLow:2,eqMid:0,eqHigh:2,tremSpeed:0,tremDepth:0,chorusRate:0,chorusDepth:0,chorusMix:0,flangerRate:0,flangerDepth:0,flangerFeedback:0,bitDepth:16,sampleRate:44100},
-  'Darth Vader': {pitch:-12,formant:-6,reverbMix:15,reverbSize:20,reverbDamp:60,delayTime:0,delayFeedback:0,delayMix:0,distAmount:10,distMix:15,compThreshold:-5,compRatio:12,gateThreshold:-35,gateFloor:-65,eqLow:8,eqMid:-2,eqHigh:-4,tremSpeed:1.5,tremDepth:10,chorusRate:0,chorusDepth:0,chorusMix:0,flangerRate:0,flangerDepth:0,flangerFeedback:0,bitDepth:16,sampleRate:44100},
-  'Anime': {pitch:10,formant:5,reverbMix:15,reverbSize:20,reverbDamp:50,delayTime:0,delayFeedback:0,delayMix:0,distAmount:0,distMix:0,compThreshold:-18,compRatio:3,gateThreshold:-50,gateFloor:-80,eqLow:-4,eqMid:2,eqHigh:8,tremSpeed:0,tremDepth:0,chorusRate:0,chorusDepth:0,chorusMix:0,flangerRate:0,flangerDepth:0,flangerFeedback:0,bitDepth:16,sampleRate:44100},
-  'Old Radio': {pitch:0,formant:0,reverbMix:5,reverbSize:10,reverbDamp:80,delayTime:0,delayFeedback:0,delayMix:0,distAmount:40,distMix:35,compThreshold:-8,compRatio:8,gateThreshold:-40,gateFloor:-70,eqLow:-12,eqMid:6,eqHigh:-10,tremSpeed:0.5,tremDepth:8,chorusRate:0,chorusDepth:0,chorusMix:0,flangerRate:0,flangerDepth:0,flangerFeedback:0,bitDepth:10,sampleRate:11025},
-  'Storyteller': {pitch:0,formant:1,reverbMix:25,reverbSize:35,reverbDamp:45,delayTime:0,delayFeedback:0,delayMix:0,distAmount:0,distMix:0,compThreshold:-12,compRatio:5,gateThreshold:-50,gateFloor:-80,eqLow:3,eqMid:2,eqHigh:-2,tremSpeed:0,tremDepth:0,chorusRate:0.2,chorusDepth:10,chorusMix:8,flangerRate:0,flangerDepth:0,flangerFeedback:0,bitDepth:16,sampleRate:44100},
-  'Horror': {pitch:-15,formant:-6,reverbMix:60,reverbSize:80,reverbDamp:20,delayTime:200,delayFeedback:35,delayMix:25,distAmount:15,distMix:20,compThreshold:-10,compRatio:6,gateThreshold:-50,gateFloor:-80,eqLow:6,eqMid:-4,eqHigh:-2,tremSpeed:2,tremDepth:40,chorusRate:0,chorusDepth:0,chorusMix:0,flangerRate:0,flangerDepth:0,flangerFeedback:0,bitDepth:16,sampleRate:44100},
-  'Glitch': {pitch:7,formant:4,reverbMix:10,reverbSize:15,reverbDamp:60,delayTime:30,delayFeedback:55,delayMix:30,distAmount:50,distMix:40,compThreshold:-8,compRatio:8,gateThreshold:-40,gateFloor:-70,eqLow:0,eqMid:4,eqHigh:2,tremSpeed:15,tremDepth:60,chorusRate:8,chorusDepth:70,chorusMix:40,flangerRate:7,flangerDepth:80,flangerFeedback:75,bitDepth:6,sampleRate:16000}
-};
-
-const voicemodState = {
-  enabled: false,
-  applyMode: 'mic',
-  activePreset: null,
-  noiseSuppression: false,
-  noiseThreshold: -50,
-  customPresets: JSON.parse(localStorage.getItem('vm-custom-presets') || '{}'),
-  hotkeys: JSON.parse(localStorage.getItem('vm-hotkeys') || '{}'),
-  current: {pitch:0,formant:0,reverbMix:0,reverbSize:50,reverbDamp:50,delayTime:0,delayFeedback:0,delayMix:0,distAmount:0,distMix:0,compThreshold:-24,compRatio:4,gateThreshold:-50,gateFloor:-80,eqLow:0,eqMid:0,eqHigh:0,tremSpeed:5,tremDepth:0,chorusRate:1,chorusDepth:0,chorusMix:0,flangerRate:1,flangerDepth:0,flangerFeedback:0,bitDepth:16,sampleRate:44100}
-};
-
-let vmHotkeyListening = null;
-
-function voicemodApplyPreset(name) {
-  const p = voicemodPresets[name] || voicemodState.customPresets[name];
-  if (!p) return;
-  voicemodState.activePreset = name;
-  Object.assign(voicemodState.current, p);
-  const map = {vmPitch:'pitch',vmFormant:'formant',vmReverbMix:'reverbMix',vmReverbSize:'reverbSize',vmReverbDamp:'reverbDamp',vmDelayTime:'delayTime',vmDelayFeedback:'delayFeedback',vmDelayMix:'delayMix',vmDistAmount:'distAmount',vmDistMix:'distMix',vmCompThreshold:'compThreshold',vmCompRatio:'compRatio',vmGateThreshold:'gateThreshold',vmGateFloor:'gateFloor',vmEqLow:'eqLow',vmEqMid:'eqMid',vmEqHigh:'eqHigh',vmTremSpeed:'tremSpeed',vmTremDepth:'tremDepth',vmChorusRate:'chorusRate',vmChorusDepth:'chorusDepth',vmChorusMix:'chorusMix',vmFlangerRate:'flangerRate',vmFlangerDepth:'flangerDepth',vmFlangerFeedback:'flangerFeedback',vmBitDepth:'bitDepth',vmSampleRate:'sampleRate'};
-  for (const [elId, key] of Object.entries(map)) {
-    const el = document.getElementById(elId);
-    if (el) { el.value = p[key]; const ev = el.nextElementSibling; if (ev && ev.classList.contains('range-val')) ev.textContent = p[key]; }
-  }
-  document.querySelectorAll('.voicemod-card').forEach(c => c.classList.toggle('active', c.dataset.preset === name));
-  // Auto-enable voice changer when selecting a preset (Clean disables it)
-  if (name === 'Clean') {
-    voicemodState.enabled = false;
-    document.getElementById('vmMasterToggle').checked = false;
-  } else {
-    voicemodState.enabled = true;
-    document.getElementById('vmMasterToggle').checked = true;
-  }
-  voicemodApplyToAudio();
-  showToast('Voice: ' + name, 'success');
-}
-
-function voicemodApplyCustom() {
-  voicemodState.activePreset = null;
-  document.querySelectorAll('.voicemod-card').forEach(c => c.classList.remove('active'));
-  const map = {vmPitch:'pitch',vmFormant:'formant',vmReverbMix:'reverbMix',vmReverbSize:'reverbSize',vmReverbDamp:'reverbDamp',vmDelayTime:'delayTime',vmDelayFeedback:'delayFeedback',vmDelayMix:'delayMix',vmDistAmount:'distAmount',vmDistMix:'distMix',vmCompThreshold:'compThreshold',vmCompRatio:'compRatio',vmGateThreshold:'gateThreshold',vmGateFloor:'gateFloor',vmEqLow:'eqLow',vmEqMid:'eqMid',vmEqHigh:'eqHigh',vmTremSpeed:'tremSpeed',vmTremDepth:'tremDepth',vmChorusRate:'chorusRate',vmChorusDepth:'chorusDepth',vmChorusMix:'chorusMix',vmFlangerRate:'flangerRate',vmFlangerDepth:'flangerDepth',vmFlangerFeedback:'flangerFeedback',vmBitDepth:'bitDepth',vmSampleRate:'sampleRate'};
-  for (const [elId, key] of Object.entries(map)) {
-    const el = document.getElementById(elId);
-    if (el) voicemodState.current[key] = parseFloat(el.value);
-  }
-  if (voicemodState.enabled) voicemodApplyToAudio();
-}
-
-function voicemodToggle() {
-  voicemodState.enabled = document.getElementById('vmMasterToggle').checked;
-  voicemodApplyToAudio();
-  showToast('Voice changer ' + (voicemodState.enabled ? 'ON' : 'OFF'));
-}
-
-function voicemodApplyToAudio() {
-  const c = voicemodState.current;
-  if (!voicemodState.enabled) {
-    eqPitch = { on: false, val: 0 };
-    eqReverb = { on: false, dry: 0.7, wet: 0.3, damp: 0.5, room: 0.5 };
-    eqDelay = { on: false, time: 0.3, feedback: 0.4, mix: 0.3 };
-    eqDist = { on: false, amount: 50, mix: 0.5 };
-    eqComp = { on: false, threshold: -24, ratio: 4, knee: 10, attack: 0.003, release: 0.25 };
-    eqGate = { on: false, threshold: -48, floor: 0.08 };
-    eqTremolo = { on: false, speed: 5, depth: 0.5 };
-  } else {
-    // Force mic processing on so voicemod effects apply
-    if (eqTarget !== 'all') {
-      eqTarget = 'all';
-      document.getElementById('eqTarget').value = 'all';
-    }
-    // Pitch
-    eqPitch.on = c.pitch !== 0;
-    eqPitch.val = clampPitchSemis(c.pitch);
-    document.getElementById('eqPitchSlider').value = eqPitch.val;
-    const pitchVal = document.getElementById('eqPitchVal');
-    if (pitchVal) pitchVal.textContent = eqPitch.val;
-    document.getElementById('eqPitchToggle').classList.toggle('on', eqPitch.on);
-
-    // Reverb (voicemod uses 0-100 scale)
-    eqReverb.on = c.reverbMix > 0;
-    eqReverb.wet = c.reverbMix / 100;
-    eqReverb.dry = 1 - eqReverb.wet;
-    eqReverb.room = c.reverbSize / 100;
-    eqReverb.damp = c.reverbDamp / 100;
-    document.getElementById('eqReverbDry').value = eqReverb.dry;
-    document.getElementById('eqReverbWet').value = eqReverb.wet;
-    document.getElementById('eqReverbRoom').value = eqReverb.room;
-    document.getElementById('eqReverbDamp').value = eqReverb.damp;
-    document.getElementById('eqReverbToggle').classList.toggle('on', eqReverb.on);
-
-    // Delay (voicemod delayTime in ms, convert to seconds)
-    eqDelay.on = c.delayMix > 0;
-    eqDelay.time = Math.max(0.01, c.delayTime / 1000);
-    eqDelay.feedback = c.delayFeedback / 100;
-    eqDelay.mix = c.delayMix / 100;
-    document.getElementById('eqDelayTime').value = eqDelay.time;
-    document.getElementById('eqDelayFeedback').value = eqDelay.feedback;
-    document.getElementById('eqDelayMix').value = eqDelay.mix;
-    document.getElementById('eqDelayToggle').classList.toggle('on', eqDelay.on);
-
-    // Distortion
-    eqDist.on = c.distAmount > 0;
-    eqDist.amount = c.distAmount;
-    eqDist.mix = c.distMix / 100;
-    document.getElementById('eqDistAmount').value = eqDist.amount;
-    document.getElementById('eqDistMix').value = eqDist.mix;
-    document.getElementById('eqDistToggle').classList.toggle('on', eqDist.on);
-
-    // Compressor
-    eqComp.on = c.compRatio > 1;
-    eqComp.threshold = c.compThreshold;
-    eqComp.ratio = c.compRatio;
-    document.getElementById('eqCompThreshold').value = eqComp.threshold;
-    document.getElementById('eqCompRatio').value = eqComp.ratio;
-    document.getElementById('eqCompToggle').classList.toggle('on', eqComp.on);
-
-    // Noise Gate
-    eqGate.on = c.gateThreshold > -60;
-    eqGate.threshold = c.gateThreshold;
-    eqGate.floor = Math.pow(10, c.gateFloor / 20);
-    document.getElementById('eqGateThreshold').value = eqGate.threshold;
-    document.getElementById('eqGateToggle').classList.toggle('on', eqGate.on);
-
-    // Tremolo
-    eqTremolo.on = c.tremDepth > 0;
-    eqTremolo.speed = c.tremSpeed;
-    eqTremolo.depth = c.tremDepth / 100;
-    document.getElementById('eqTremoloSpeed').value = eqTremolo.speed;
-    document.getElementById('eqTremoloDepth').value = eqTremolo.depth;
-    document.getElementById('eqTremoloToggle').classList.toggle('on', eqTremolo.on);
-
-    // Simple 3-band EQ via existing bands
-    if (eqBands.length >= 3) {
-      eqBands[0].gain = c.eqLow;
-      eqBands[Math.floor(eqBands.length / 2)].gain = c.eqMid;
-      eqBands[eqBands.length - 1].gain = c.eqHigh;
-    }
-  }
-  // Rebuild mic chain with new effects (don't auto-start mic — user controls that)
-  rebuildAll();
-  eqRenderPresets();
-  eqSaveSettings();
-  eqDrawGraph();
-}
-
-function voicemodSaveCustom() {
-  const nameEl = document.getElementById('vmCustomName');
-  const name = (nameEl.value || '').trim();
-  if (!name) { showToast('Enter a preset name', 'error'); return; }
-  voicemodState.customPresets[name] = {...voicemodState.current};
-  localStorage.setItem('vm-custom-presets', JSON.stringify(voicemodState.customPresets));
-  nameEl.value = '';
-  voicemodRenderCustomList();
-  showToast('Saved: ' + name, 'success');
-}
-
-function voicemodDeleteCustom(name) {
-  delete voicemodState.customPresets[name];
-  localStorage.setItem('vm-custom-presets', JSON.stringify(voicemodState.customPresets));
-  voicemodRenderCustomList();
-  showToast('Deleted: ' + name);
-}
-
-function voicemodRenderCustomList() {
-  const c = document.getElementById('vmCustomList');
-  if (!c) return;
-  const names = Object.keys(voicemodState.customPresets);
-  if (!names.length) { c.innerHTML = '<span style="font-size:10px;color:var(--text-muted)">No custom presets saved</span>'; return; }
-  c.innerHTML = names.map(n => `<div style="display:flex;align-items:center;gap:6px;padding:4px 0"><button class="mini-btn" onclick="voicemodApplyPreset('${esc(n)}')">${esc(n)}</button><button class="mini-btn" style="color:var(--red)" onclick="voicemodDeleteCustom('${esc(n)}')">&#10005;</button></div>`).join('');
-}
-
-function voicemodBindHotkey(presetName) {
-  if (vmHotkeyListening) {
-    const oldBtn = document.querySelector(`.vm-hotkey-btn[data-preset="${vmHotkeyListening}"]`);
-    if (oldBtn) oldBtn.classList.remove('listening');
-  }
-  vmHotkeyListening = presetName;
-  const btn = document.querySelector(`.vm-hotkey-btn[data-preset="${presetName}"]`);
-  if (btn) { btn.classList.add('listening'); btn.textContent = '...'; }
-}
-
-document.addEventListener('keydown', function(e) {
-  if (!vmHotkeyListening) {
-    for (const [preset, key] of Object.entries(voicemodState.hotkeys)) {
-      if (e.code === key) { voicemodApplyPreset(preset); return; }
-    }
-    return;
-  }
-  e.preventDefault();
-  const preset = vmHotkeyListening;
-  voicemodState.hotkeys[preset] = e.code;
-  localStorage.setItem('vm-hotkeys', JSON.stringify(voicemodState.hotkeys));
-  const btn = document.querySelector(`.vm-hotkey-btn[data-preset="${preset}"]`);
-  if (btn) { btn.classList.remove('listening'); btn.textContent = e.code; }
-  vmHotkeyListening = null;
-  showToast(preset + ' → ' + e.code, 'success');
-});
-
-(function() {
-  for (const [preset, key] of Object.entries(voicemodState.hotkeys)) {
-    const btn = document.querySelector(`.vm-hotkey-btn[data-preset="${preset}"]`);
-    if (btn) btn.textContent = key;
-  }
-  voicemodRenderCustomList();
-})();
-
-// ── AI Voice Changer ──
-let aiVoiceFolder = localStorage.getItem('ai-voice-folder') || 'C:\\Users\\xurco\\Desktop\\Voice changer';
-let aiVoiceStatusTimer = null;
-
-function aivoiceSetText(id, value) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = value;
-}
-
-function aivoiceRenderStatus(status = {}) {
-  const running = !!status.running;
-  const statusEl = document.getElementById('aivoiceStatus');
-  const button = document.getElementById('aivoiceStartBtn');
-  const folder = status.folder || aiVoiceFolder;
-  aiVoiceFolder = folder;
-  localStorage.setItem('ai-voice-folder', folder);
-  aivoiceSetText('aivoiceFolderPath', folder);
-  aivoiceSetText('aivoiceEngineValue', running ? 'Running' : 'Offline');
-  aivoiceSetText('aivoiceStatusText', running ? 'Engine online' : 'Engine offline');
-  statusEl?.classList.toggle('on', running);
-  statusEl?.classList.toggle('loading', false);
-  if (button) {
-    button.textContent = running ? 'Stop AI Engine' : 'Start AI Engine';
-    button.classList.toggle('primary', !running);
-  }
-}
-
-async function aivoiceSelectFolder() {
-  try {
-    const result = await api.aiVoice.selectFolder();
-    if (result?.error) { showToast(result.error, 'error'); return; }
-    if (result?.folder) {
-      aiVoiceFolder = result.folder;
-      localStorage.setItem('ai-voice-folder', aiVoiceFolder);
-      aivoiceSetText('aivoiceFolderPath', aiVoiceFolder);
-      showToast('AI voice folder selected', 'success');
-    }
-  } catch (e) { showToast(e.message || 'Could not select the AI voice folder', 'error'); }
-}
-
-async function aivoiceOpenFolder() {
-  try {
-    const result = await api.aiVoice.openFolder(aiVoiceFolder);
-    if (result?.error) showToast(result.error, 'error');
-  } catch (e) { showToast(e.message || 'Could not open the AI voice folder', 'error'); }
-}
-
-// Native AI Voice Changer client: the controls and audio transport live here.
-let aiVoiceNativeInfo = null;
-let aiVoiceNativeUpdateTimer = null;
-let aiVoiceNativeConverting = false;
-const aiVoiceNativeAudio = { ctx:null, stream:null, source:null, processor:null, silent:null, destination:null, output:null, monitor:null, responseOff:null, inputBuffer:[], nextPlayTime:0, sequence:0, pending:0 };
-
-function aivoiceError(message = '') {
-  const el = document.getElementById('aivoiceError');
-  if (!el) return;
-  el.textContent = message;
-  el.style.display = message ? 'block' : 'none';
-}
-
-function aivoiceNativeSettings() {
-  const payload = aiVoiceNativeInfo?.serverSetting || aiVoiceNativeInfo?.settings || aiVoiceNativeInfo || {};
-  return payload.serverSetting || payload;
-}
-
-function aivoiceValue(key, fallback) {
-  const value = aivoiceNativeSettings()[key];
-  return value === undefined || value === null ? fallback : value;
-}
-
-function aivoiceSetControl(id, value) {
-  const el = document.getElementById(id);
-  if (el && value !== undefined && value !== null) el.value = String(value);
-}
-
-function aivoiceRenderModels() {
-  const grid = document.getElementById('aivoiceModelGrid');
-  if (!grid) return;
-  const source = aiVoiceNativeInfo?.modelSlots || aivoiceNativeSettings().modelSlots || [];
-  const slots = Array.isArray(source) ? source : Object.values(source || {});
-  aivoiceSetText('aivoiceModelCount', slots.length);
-  if (!slots.length) {
-    grid.innerHTML = '<div class="ai-voice-placeholder" style="height:100px;grid-column:1/-1">No model slots were returned by the engine.</div>';
-    return;
-  }
-  const selected = Number(aivoiceValue('modelSlotIndex', 0)) % 1000;
-  grid.innerHTML = slots.map((slot, index) => {
-    const name = slot?.name || slot?.modelName || slot?.voiceChangerName || slot?.model || `Voice slot ${index}`;
-    const type = slot?.voiceChangerType || slot?.type || 'RVC';
-    return `<button class="ai-voice-model ${index === selected ? 'active' : ''}" onclick="aivoiceSelectModel(${index})"><span class="ai-voice-model-index">SLOT ${index}</span><span class="ai-voice-model-name">${esc(String(name))}</span><span class="ai-voice-model-type">${esc(String(type))}</span></button>`;
-  }).join('');
-  const slot = slots[selected] || slots[0];
-  const name = slot?.name || slot?.modelName || slot?.voiceChangerName || slot?.model || `Voice slot ${selected}`;
-  aivoiceSetText('aivoiceSelectedModel', String(name));
-  aivoiceSetText('aivoiceSelectedModelInfo', `${slot?.voiceChangerType || slot?.type || 'RVC'} model slot ${selected}`);
-}
-
-function aivoiceRenderInfo() {
-  const settings = aivoiceNativeSettings();
-  const valueMap = {
-    aivoiceInGain: ['serverInputAudioGain', 1], aivoiceOutGain: ['serverOutputAudioGain', 1],
-    aivoiceTune: ['tran', 0], aivoiceIndex: ['indexRatio', 0], aivoiceF0: ['f0Detector', 'rmvpe_onnx'],
-    aivoiceGpu: ['gpu', 0], aivoiceChunk: ['serverReadChunkSize', 24576], aivoiceExtra: ['extraConvertSize', 8192],
-    aivoiceSilence: ['silentThreshold', 0.00001],
-  };
-  for (const [id, [key, fallback]] of Object.entries(valueMap)) {
-    let value = settings[key] === undefined ? fallback : settings[key];
-    if (id === 'aivoiceChunk') value = Math.max(1, Math.round(Number(value) / 128));
-    aivoiceSetControl(id, value);
-  }
-  const checks = [['aivoiceEcho', 'echoCancellation'], ['aivoiceSup1', 'noiseSuppression'], ['aivoiceSup2', 'noiseSuppression2'], ['aivoicePass', 'passThrough']];
-  for (const [id, key] of checks) { const el = document.getElementById(id); if (el && settings[key] !== undefined) el.checked = !!settings[key]; }
-  aivoiceUpdateLabels();
-  const gpus = settings.gpus || aiVoiceNativeInfo?.gpus;
-  if (Array.isArray(gpus) && gpus.length) {
-    const select = document.getElementById('aivoiceGpu');
-    if (select) select.innerHTML = gpus.map((gpu, i) => `<option value="${i}">${esc(String(gpu?.name || gpu || `GPU ${i}`))}</option>`).join('') + '<option value="-1">CPU</option>';
-    aivoiceSetControl('aivoiceGpu', settings.gpu ?? 0);
-  }
-  aivoiceRenderModels();
-}
-
-function aivoiceUpdateLabels() {
-  const values = { aivoiceInGain:'aivoiceInGainValue', aivoiceOutGain:'aivoiceOutGainValue', aivoiceTune:'aivoiceTuneValue', aivoiceIndex:'aivoiceIndexValue', aivoiceSilence:'aivoiceSilenceValue' };
-  for (const [inputId, outputId] of Object.entries(values)) {
-    const input = document.getElementById(inputId); const output = document.getElementById(outputId);
-    if (input && output) output.textContent = inputId === 'aivoiceSilence' ? Number(input.value).toFixed(5) : (inputId === 'aivoiceTune' ? input.value : Number(input.value).toFixed(2));
-  }
-}
-
-function aivoiceQueueSetting(key, value) {
-  clearTimeout(aiVoiceNativeUpdateTimer);
-  aiVoiceNativeUpdateTimer = setTimeout(async () => {
-    const result = await window.api.aiVoice.updateSetting(key, value);
-    if (result?.error) aivoiceError(result.error);
-  }, 100);
-}
-
-async function aivoiceFetchInfo() {
-  const result = await window.api.aiVoice.info();
-  if (!result?.ok) { aivoiceError(result?.error || 'The AI voice engine is not reachable.'); return null; }
-  aiVoiceNativeInfo = result.data || {};
-  aivoiceError('');
-  aivoiceRenderInfo();
-  return aiVoiceNativeInfo;
-}
-
-async function aivoiceSelectModel(index) {
-  await window.api.aiVoice.updateSetting('modelSlotIndex', String(Date.now()).slice(0, -3) + String(index));
-  await aivoiceFetchInfo();
-}
-
-async function aivoiceWaitForInfo(timeout = 20000) {
-  const started = Date.now();
-  while (Date.now() - started < timeout) {
-    const info = await window.api.aiVoice.info();
-    if (info?.ok) { aiVoiceNativeInfo = info.data || {}; aivoiceRenderInfo(); return true; }
-    await new Promise(resolve => setTimeout(resolve, 500));
-  }
-  return false;
-}
-
-async function aivoiceEnumerateDevices() {
-  try {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const visible = devices.filter(d => !isHiddenAudioDevice(d.label));
-    const groups = { aivoiceInput: visible.filter(d => d.kind === 'audioinput'), aivoiceOutput: visible.filter(d => d.kind === 'audiooutput'), aivoiceMonitor: visible.filter(d => d.kind === 'audiooutput') };
-    for (const [id, list] of Object.entries(groups)) {
-      const select = document.getElementById(id); if (!select) continue;
-      const saved = localStorage.getItem(`ai-voice-${id}`) || '';
-      select.innerHTML = list.map((d, i) => `<option value="${esc(d.deviceId)}">${esc(d.label || `${d.kind === 'audioinput' ? 'Microphone' : 'Output'} ${i + 1}`)}</option>`).join('');
-      if (list.some(d => d.deviceId === saved)) select.value = saved;
-      select.onchange = () => { localStorage.setItem(`ai-voice-${id}`, select.value); if (id !== 'aivoiceInput') aivoiceSetAudioSink(id === 'aivoiceOutput' ? aiVoiceNativeAudio.output : aiVoiceNativeAudio.monitor, select.value); };
-    }
-  } catch (e) { aivoiceError(e.message || 'Could not enumerate audio devices.'); }
-}
-
-function aivoiceSetAudioSink(audio, deviceId) {
-  if (audio && deviceId && typeof audio.setSinkId === 'function') audio.setSinkId(deviceId).catch(() => {});
-}
-
-function aivoiceInt16ToFloat(bytes) {
-  const view = bytes instanceof Uint8Array ? new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength) : new DataView(bytes);
-  const out = new Float32Array(Math.floor(view.byteLength / 2));
-  for (let i = 0; i < out.length; i++) out[i] = view.getInt16(i * 2, true) / 32768;
-  return out;
-}
-
-function aivoiceHandleResponse(packet) {
-  if (!aiVoiceNativeConverting || !packet?.audio || !aiVoiceNativeAudio.ctx) return;
-  const bytes = packet.audio instanceof Uint8Array ? packet.audio : new Uint8Array(packet.audio);
-  const samples = aivoiceInt16ToFloat(bytes);
-  const ctx = aiVoiceNativeAudio.ctx;
-  const buffer = ctx.createBuffer(1, samples.length, Number(aivoiceValue('serverOutputAudioSampleRate', 48000)) || 48000);
-  buffer.copyToChannel(samples, 0);
-  const source = ctx.createBufferSource(); const gain = ctx.createGain();
-  gain.gain.value = Number(document.getElementById('aivoiceOutGain')?.value || 1);
-  source.buffer = buffer; source.connect(gain).connect(aiVoiceNativeAudio.destination);
-  const start = Math.max(ctx.currentTime + 0.015, aiVoiceNativeAudio.nextPlayTime || 0);
-  source.start(start); aiVoiceNativeAudio.nextPlayTime = start + buffer.duration; source.onended = () => source.disconnect();
-  aiVoiceNativeAudio.pending = Math.max(0, aiVoiceNativeAudio.pending - 1);
-  aivoiceSetText('aivoiceResStat', `${Math.round(buffer.duration * 1000)} ms`);
-  aivoiceSetText('aivoiceQueueStat', aiVoiceNativeAudio.pending);
-  const metrics = packet.metrics || {};
-  if (metrics.rtf !== undefined) aivoiceSetText('aivoiceRtfStat', Number(metrics.rtf).toFixed(2));
-}
-
-function aivoiceFloatToInt16(floatData) {
-  const out = new Int16Array(floatData.length);
-  const gain = Number(document.getElementById('aivoiceInGain')?.value || 1);
-  for (let i = 0; i < floatData.length; i++) { const value = Math.max(-1, Math.min(1, floatData[i] * gain)); out[i] = value < 0 ? value * 32768 : value * 32767; }
-  return out.buffer;
-}
-
-async function aivoiceToggleConversion() {
-  if (aiVoiceNativeConverting) { await aivoiceStopConversion(); return; }
-  const button = document.getElementById('aivoiceConvertBtn'); if (button) button.disabled = true;
-  try {
-    const status = await window.api.aiVoice.status();
-    if (!status?.running) {
-      const started = await window.api.aiVoice.start(aiVoiceFolder);
-      if (started?.error) throw new Error(started.error);
-      if (!await aivoiceWaitForInfo()) throw new Error('The AI engine started but did not become ready.');
-    } else await aivoiceFetchInfo();
-    const connection = await window.api.aiVoice.connect();
-    if (!connection?.ok) throw new Error(connection?.error || 'Could not connect to the AI audio stream.');
-    const inputId = document.getElementById('aivoiceInput')?.value;
-    const constraints = { audio: { channelCount: 1, sampleRate: 48000, echoCancellation: !!document.getElementById('aivoiceEcho')?.checked, noiseSuppression: !!document.getElementById('aivoiceSup1')?.checked, ...(inputId ? { deviceId: { exact: inputId } } : {}) } };
-    aiVoiceNativeAudio.stream = await navigator.mediaDevices.getUserMedia(constraints);
-    aiVoiceNativeAudio.ctx = new AudioContext({ sampleRate: 48000, latencyHint: 'interactive' });
-    aiVoiceNativeAudio.source = aiVoiceNativeAudio.ctx.createMediaStreamSource(aiVoiceNativeAudio.stream);
-    aiVoiceNativeAudio.processor = aiVoiceNativeAudio.ctx.createScriptProcessor(256, 1, 1);
-    aiVoiceNativeAudio.silent = aiVoiceNativeAudio.ctx.createGain(); aiVoiceNativeAudio.silent.gain.value = 0;
-    aiVoiceNativeAudio.source.connect(aiVoiceNativeAudio.processor).connect(aiVoiceNativeAudio.silent).connect(aiVoiceNativeAudio.ctx.destination);
-    aiVoiceNativeAudio.destination = aiVoiceNativeAudio.ctx.createMediaStreamDestination();
-    aiVoiceNativeAudio.output = new Audio(); aiVoiceNativeAudio.output.autoplay = true; aiVoiceNativeAudio.output.srcObject = aiVoiceNativeAudio.destination.stream;
-    aiVoiceNativeAudio.monitor = new Audio(); aiVoiceNativeAudio.monitor.autoplay = true; aiVoiceNativeAudio.monitor.srcObject = aiVoiceNativeAudio.destination.stream;
-    aivoiceSetAudioSink(aiVoiceNativeAudio.output, document.getElementById('aivoiceOutput')?.value); aivoiceSetAudioSink(aiVoiceNativeAudio.monitor, document.getElementById('aivoiceMonitor')?.value);
-    await Promise.all([aiVoiceNativeAudio.output.play(), aiVoiceNativeAudio.monitor.play()]);
-    aiVoiceNativeAudio.inputBuffer = []; aiVoiceNativeAudio.nextPlayTime = 0; aiVoiceNativeAudio.pending = 0;
-    aiVoiceNativeAudio.responseOff = window.api.aiVoice.onAudioResponse(aivoiceHandleResponse);
-    aiVoiceNativeAudio.processor.onaudioprocess = event => {
-      const samples = event.inputBuffer.getChannelData(0); for (let i = 0; i < samples.length; i++) aiVoiceNativeAudio.inputBuffer.push(samples[i]);
-      const chunk = Math.max(128, Number(document.getElementById('aivoiceChunk')?.value || 192) * 128);
-      while (aiVoiceNativeAudio.inputBuffer.length >= chunk) {
-        const part = new Float32Array(aiVoiceNativeAudio.inputBuffer.splice(0, chunk));
-        aiVoiceNativeAudio.pending++; window.api.aiVoice.sendAudio(Date.now() + aiVoiceNativeAudio.sequence++, aivoiceFloatToInt16(part));
-      }
-      aivoiceSetText('aivoiceBufStat', `${Math.round(aiVoiceNativeAudio.inputBuffer.length / 48)} ms`); aivoiceSetText('aivoiceQueueStat', aiVoiceNativeAudio.pending);
-    };
-    aiVoiceNativeConverting = true; aivoiceSetText('aivoiceConversionStatus', 'Conversion running'); if (button) button.textContent = 'Stop conversion'; button?.classList.add('active'); showToast('AI voice conversion started', 'success');
-  } catch (e) { await aivoiceStopConversion(); aivoiceError(e.message || 'Could not start AI voice conversion.'); showToast(e.message || 'AI voice conversion failed', 'error'); }
-  finally { if (button) button.disabled = false; }
-}
-
-async function aivoiceStopConversion() {
-  aiVoiceNativeConverting = false;
-  aiVoiceNativeAudio.responseOff?.(); aiVoiceNativeAudio.responseOff = null;
-  aiVoiceNativeAudio.processor && (aiVoiceNativeAudio.processor.onaudioprocess = null);
-  try { aiVoiceNativeAudio.source?.disconnect(); aiVoiceNativeAudio.processor?.disconnect(); aiVoiceNativeAudio.silent?.disconnect(); } catch {}
-  aiVoiceNativeAudio.stream?.getTracks().forEach(track => track.stop());
-  try { await aiVoiceNativeAudio.ctx?.close(); } catch {}
-  aiVoiceNativeAudio.output?.pause(); aiVoiceNativeAudio.monitor?.pause();
-  aiVoiceNativeAudio.output = null; aiVoiceNativeAudio.monitor = null; aiVoiceNativeAudio.ctx = null; aiVoiceNativeAudio.stream = null; aiVoiceNativeAudio.inputBuffer = []; aiVoiceNativeAudio.pending = 0;
-  await window.api.aiVoice.disconnect();
-  const button = document.getElementById('aivoiceConvertBtn'); if (button) { button.textContent = 'Start conversion'; button.classList.remove('active'); }
-  aivoiceSetText('aivoiceConversionStatus', 'Conversion stopped'); aivoiceSetText('aivoiceQueueStat', '0');
-}
-
-async function aivoiceToggleBackend() {
-  const status = await window.api.aiVoice.status();
-  if (status?.running) { await aivoiceStopConversion(); await window.api.aiVoice.stop(); aivoiceRenderStatus({ folder: aiVoiceFolder, running: false }); showToast('AI voice engine stopped'); return; }
-  const button = document.getElementById('aivoiceStartBtn'); button && (button.disabled = true); document.getElementById('aivoiceStatus')?.classList.add('loading');
-  const result = await window.api.aiVoice.start(aiVoiceFolder);
-  if (result?.error) { aivoiceError(result.error); showToast(result.error, 'error'); }
-  else { aivoiceRenderStatus(result); await aivoiceWaitForInfo(); showToast('AI voice engine started', 'success'); }
-  button && (button.disabled = false); document.getElementById('aivoiceStatus')?.classList.remove('loading');
-}
-
-async function aivoicePollStatus() {
-  try { const status = await window.api.aiVoice.status(); aivoiceRenderStatus(status); if (status.running && !aiVoiceNativeInfo) await aivoiceFetchInfo(); } catch (e) { console.warn('AI voice status unavailable:', e); }
-}
-
-function aivoiceRefreshClient() { aivoiceFetchInfo(); aivoiceEnumerateDevices(); }
-document.querySelectorAll('#tab-voicemod input[type=range]').forEach(input => input.addEventListener('input', () => { aivoiceUpdateLabels(); }));
-const aiVoiceNativeBindings = { aivoiceInGain:['serverInputAudioGain', Number], aivoiceOutGain:['serverOutputAudioGain', Number], aivoiceTune:['tran', Number], aivoiceIndex:['indexRatio', Number], aivoiceF0:['f0Detector', String], aivoiceGpu:['gpu', Number], aivoiceChunk:['serverReadChunkSize', value => Number(value) * 128], aivoiceExtra:['extraConvertSize', Number], aivoiceSilence:['silentThreshold', Number] };
-for (const [id, [key, convert]] of Object.entries(aiVoiceNativeBindings)) document.getElementById(id)?.addEventListener('change', event => aivoiceQueueSetting(key, convert(event.target.value)));
-for (const [id, key] of [['aivoiceEcho','echoCancellation'],['aivoiceSup1','noiseSuppression'],['aivoiceSup2','noiseSuppression2'],['aivoicePass','passThrough']]) document.getElementById(id)?.addEventListener('change', event => aivoiceQueueSetting(key, event.target.checked));
-aivoiceSetText('aivoiceFolderPath', aiVoiceFolder); aivoiceEnumerateDevices(); aivoicePollStatus(); aiVoiceStatusTimer = setInterval(aivoicePollStatus, 2000);
-
 syncScreenshareHideButton();
 applyScreenshareHide({ silent: true });
 </script>

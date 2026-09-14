@@ -50,6 +50,17 @@ contextBridge.exposeInMainWorld('api', {
   songCover: (song) => ipcRenderer.invoke('song-cover', song),
   spotifyAudioStart: (sampleRate) => ipcRenderer.invoke('spotify-audio:start', sampleRate),
   spotifyAudioStop: () => ipcRenderer.invoke('spotify-audio:stop'),
+  spotifyWebStatus: () => ipcRenderer.invoke('spotify-web:status'),
+  spotifyWebConnect: (clientId, switchAccount) => ipcRenderer.invoke('spotify-web:connect', clientId, !!switchAccount),
+  spotifyWebCancel: () => ipcRenderer.invoke('spotify-web:cancel'),
+  spotifyWebDisconnect: () => ipcRenderer.invoke('spotify-web:disconnect'),
+  spotifyWebOpen: (what) => ipcRenderer.invoke('spotify-web:open', what),
+  spotifyWebRequest: (method, apiPath, body) => ipcRenderer.invoke('spotify-web:request', method, apiPath, body),
+  onSpotifyWebChanged: (cb) => {
+    const handler = () => cb();
+    ipcRenderer.on('spotify-web:changed', handler);
+    return () => ipcRenderer.removeListener('spotify-web:changed', handler);
+  },
   onSpotifyAudioStatus: (cb) => {
     const handler = (_e, status) => cb(status);
     ipcRenderer.on('spotify-audio:status', handler);

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, desktopCapturer, shell, MessageChannelMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, desktopCapturer, shell, MessageChannelMain, safeStorage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
@@ -1117,6 +1117,296 @@ function stopSpotifyAudio() {
 
 ipcMain.handle('spotify-audio:start', (_e, sampleRate) => startSpotifyAudio(sampleRate));
 ipcMain.handle('spotify-audio:stop', () => { stopSpotifyAudio(); return { ok: true }; });
+
+// ── Spotify account (Web API) ──
+// Authorised in the system browser with OAuth + PKCE: the app never sees the
+// password, there is no client secret to leak, and tokens stay in this process,
+// encrypted at rest with the OS keychain (safeStorage).
+const spotifyHttp = require('http');
+const SPOTIFY_REDIRECT_PORT = 43821;
+const SPOTIFY_REDIRECT_URI = 'http://127.0.0.1:' + SPOTIFY_REDIRECT_PORT + '/callback';
+const SPOTIFY_SCOPES = [
+  'user-read-private', 'user-read-email',
+  'playlist-read-private', 'playlist-read-collaborative',
+  'user-library-read', 'user-follow-read', 'user-top-read', 'user-read-recently-played',
+  'user-read-playback-state', 'user-modify-playback-state', 'user-read-currently-playing',
+].join(' ');
+const SPOTIFY_AUTH_FILE = path.join(app.getPath('userData'), 'spotify-account.bin');
+const SPOTIFY_CLIENT_FILE = path.join(app.getPath('userData'), 'spotify-client.json');
+
+let spotifyAccount = null;   // { clientId, accessToken, refreshToken, expiresAt, profile }
+let spotifyAccountLoaded = false;
+let spotifyAuthFlow = null;  // { server, timer, reject }
+let spotifyRefreshing = null;
+
+const spotifyB64url = buf => buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const spotifyEscape = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+function spotifySavedClientId() {
+  try { return JSON.parse(fs.readFileSync(SPOTIFY_CLIENT_FILE, 'utf8')).clientId || ''; } catch { return ''; }
+}
+
+function loadSpotifyAccount() {
+  if (spotifyAccountLoaded) return;
+  spotifyAccountLoaded = true;
+  try {
+    if (!safeStorage.isEncryptionAvailable()) return;
+    spotifyAccount = JSON.parse(safeStorage.decryptString(fs.readFileSync(SPOTIFY_AUTH_FILE)));
+  } catch {
+    spotifyAccount = null;
+  }
+}
+
+function saveSpotifyAccount() {
+  try {
+    if (!spotifyAccount) { fs.rmSync(SPOTIFY_AUTH_FILE, { force: true }); return; }
+    // Without OS encryption the tokens stay in memory only: reconnecting after
+    // a restart is better than writing them to disk in the clear.
+    if (!safeStorage.isEncryptionAvailable()) return;
+    fs.writeFileSync(SPOTIFY_AUTH_FILE, safeStorage.encryptString(JSON.stringify(spotifyAccount)));
+  } catch (e) {
+    console.warn('[spotify] could not save account:', e.message);
+  }
+}
+
+function notifySpotifyAccount() {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('spotify-web:changed');
+}
+
+async function spotifyTokenRequest(params) {
+  const res = await fetch('https://accounts.spotify.com/api/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams(params).toString(),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const e = new Error(data.error_description || data.error || ('token request failed (' + res.status + ')'));
+    e.code = data.error;
+    throw e;
+  }
+  return data;
+}
+
+async function spotifyAccessToken() {
+  loadSpotifyAccount();
+  if (!spotifyAccount) throw Object.assign(new Error('Not connected to Spotify.'), { status: 401 });
+  if (spotifyAccount.accessToken && Date.now() < spotifyAccount.expiresAt - 60000) return spotifyAccount.accessToken;
+  // One refresh at a time: parallel API calls share it.
+  if (!spotifyRefreshing) {
+    spotifyRefreshing = (async () => {
+      try {
+        const data = await spotifyTokenRequest({
+          grant_type: 'refresh_token',
+          refresh_token: spotifyAccount.refreshToken,
+          client_id: spotifyAccount.clientId,
+        });
+        spotifyAccount.accessToken = data.access_token;
+        spotifyAccount.expiresAt = Date.now() + (data.expires_in || 3600) * 1000;
+        if (data.refresh_token) spotifyAccount.refreshToken = data.refresh_token;
+        saveSpotifyAccount();
+      } catch (e) {
+        // Revoked in Spotify's settings, or the developer app was deleted.
+        if (e.code === 'invalid_grant' || e.code === 'invalid_client') {
+          spotifyAccount = null;
+          saveSpotifyAccount();
+          notifySpotifyAccount();
+        }
+        throw e;
+      } finally {
+        spotifyRefreshing = null;
+      }
+    })();
+  }
+  await spotifyRefreshing;
+  if (!spotifyAccount) throw Object.assign(new Error('Spotify sign-in expired. Connect again.'), { status: 401 });
+  return spotifyAccount.accessToken;
+}
+
+function cancelSpotifyAuthFlow(reason) {
+  const flow = spotifyAuthFlow;
+  if (!flow) return;
+  spotifyAuthFlow = null;
+  clearTimeout(flow.timer);
+  try { flow.server.close(); } catch {}
+  flow.reject(Object.assign(new Error(reason || 'Cancelled.'), { cancelled: true }));
+}
+
+function spotifyAuthPage(title, message) {
+  return '<!doctype html><meta charset="utf-8"><title>Custom Mic</title>' +
+    '<body style="margin:0;height:100vh;display:grid;place-items:center;background:#121212;color:#fff;font-family:Segoe UI,system-ui,sans-serif">' +
+    '<div style="text-align:center;padding:24px"><h1 style="font-size:28px;margin:0 0 8px">' + spotifyEscape(title) + '</h1>' +
+    '<p style="color:#b3b3b3;margin:0">' + spotifyEscape(message) + '</p></div></body>';
+}
+
+function spotifyConnect(clientId, forceDialog) {
+  cancelSpotifyAuthFlow('Replaced by a new sign-in.');
+  const verifier = spotifyB64url(crypto.randomBytes(64));
+  const challenge = spotifyB64url(crypto.createHash('sha256').update(verifier).digest());
+  const state = spotifyB64url(crypto.randomBytes(24));
+
+  return new Promise((resolve, reject) => {
+    const server = spotifyHttp.createServer(async (req, res) => {
+      const url = new URL(req.url, SPOTIFY_REDIRECT_URI);
+      if (url.pathname !== '/callback') { res.writeHead(404); res.end(); return; }
+      const page = (status, title, message) => {
+        res.writeHead(status, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(spotifyAuthPage(title, message));
+      };
+      if (!spotifyAuthFlow || spotifyAuthFlow.server !== server) { page(410, 'Sign-in expired', 'Start again from Custom Mic.'); return; }
+      // The state check stops another page completing a sign-in we did not start.
+      if (url.searchParams.get('state') !== state) { page(400, 'Sign-in failed', 'This response did not match the sign-in. Try again from Custom Mic.'); return; }
+
+      const flow = spotifyAuthFlow;
+      spotifyAuthFlow = null;
+      clearTimeout(flow.timer);
+
+      const error = url.searchParams.get('error');
+      if (error) {
+        page(200, 'Not connected', error === 'access_denied' ? 'You declined access. You can close this tab.' : 'Spotify reported: ' + error);
+        server.close();
+        reject(new Error(error === 'access_denied' ? 'Access was declined.' : error));
+        return;
+      }
+      try {
+        const token = await spotifyTokenRequest({
+          grant_type: 'authorization_code',
+          code: url.searchParams.get('code') || '',
+          redirect_uri: SPOTIFY_REDIRECT_URI,
+          client_id: clientId,
+          code_verifier: verifier,
+        });
+        const profileRes = await fetch('https://api.spotify.com/v1/me', { headers: { Authorization: 'Bearer ' + token.access_token } });
+        const profile = await profileRes.json().catch(() => null);
+        if (!profileRes.ok) {
+          throw new Error(profile?.error?.message || ('could not read the account (' + profileRes.status + '). ' +
+            'If the developer app is in development mode, add this account under User Management.'));
+        }
+        spotifyAccount = {
+          clientId,
+          accessToken: token.access_token,
+          refreshToken: token.refresh_token,
+          expiresAt: Date.now() + (token.expires_in || 3600) * 1000,
+          profile: {
+            id: profile.id, display_name: profile.display_name, email: profile.email,
+            product: profile.product, country: profile.country, images: profile.images,
+          },
+        };
+        spotifyAccountLoaded = true;
+        saveSpotifyAccount();
+        page(200, 'Connected to Spotify', 'You can close this tab and go back to Custom Mic.');
+        notifySpotifyAccount();
+        resolve(spotifyAccount.profile);
+      } catch (e) {
+        page(500, 'Sign-in failed', e.message);
+        reject(e);
+      } finally {
+        server.close();
+      }
+    });
+
+    server.on('error', e => {
+      if (spotifyAuthFlow?.server === server) { clearTimeout(spotifyAuthFlow.timer); spotifyAuthFlow = null; }
+      reject(new Error(e.code === 'EADDRINUSE'
+        ? 'Port ' + SPOTIFY_REDIRECT_PORT + ' is being used by another program. Close it and try again.'
+        : e.message));
+    });
+
+    server.listen(SPOTIFY_REDIRECT_PORT, '127.0.0.1', () => {
+      const timer = setTimeout(() => cancelSpotifyAuthFlow('Sign-in timed out.'), 5 * 60 * 1000);
+      spotifyAuthFlow = { server, timer, reject };
+      const auth = new URL('https://accounts.spotify.com/authorize');
+      auth.search = new URLSearchParams({
+        response_type: 'code',
+        client_id: clientId,
+        scope: SPOTIFY_SCOPES,
+        redirect_uri: SPOTIFY_REDIRECT_URI,
+        state,
+        code_challenge_method: 'S256',
+        code_challenge: challenge,
+        // Switching accounts must show Spotify's account picker instead of
+        // silently reusing the account already signed in to the browser.
+        ...(forceDialog ? { show_dialog: 'true' } : {}),
+      }).toString();
+      shell.openExternal(auth.toString());
+    });
+  });
+}
+
+ipcMain.handle('spotify-web:status', () => {
+  loadSpotifyAccount();
+  return {
+    connected: !!spotifyAccount,
+    connecting: !!spotifyAuthFlow,
+    profile: spotifyAccount?.profile || null,
+    clientId: spotifyAccount?.clientId || spotifySavedClientId(),
+    redirectUri: SPOTIFY_REDIRECT_URI,
+    encrypted: safeStorage.isEncryptionAvailable(),
+  };
+});
+
+ipcMain.handle('spotify-web:connect', async (_e, clientId, switchAccount) => {
+  clientId = String(clientId || '').trim();
+  if (!/^[0-9a-f]{32}$/i.test(clientId)) return { error: 'That is not a valid Spotify Client ID.' };
+  // The Client ID is public by design; only tokens are kept encrypted.
+  try { fs.writeFileSync(SPOTIFY_CLIENT_FILE, JSON.stringify({ clientId })); } catch {}
+  try {
+    const profile = await spotifyConnect(clientId, !!switchAccount);
+    return { ok: true, profile };
+  } catch (e) {
+    return { error: e.message, cancelled: !!e.cancelled };
+  }
+});
+
+ipcMain.handle('spotify-web:cancel', () => { cancelSpotifyAuthFlow('Cancelled.'); return { ok: true }; });
+
+ipcMain.handle('spotify-web:disconnect', () => {
+  cancelSpotifyAuthFlow('Cancelled.');
+  loadSpotifyAccount();
+  spotifyAccount = null;
+  saveSpotifyAccount();
+  notifySpotifyAccount();
+  return { ok: true };
+});
+
+ipcMain.handle('spotify-web:open', (_e, what) => {
+  const targets = { dashboard: 'https://developer.spotify.com/dashboard', app: 'spotify:' };
+  if (!targets[what]) return { ok: false };
+  shell.openExternal(targets[what]);
+  return { ok: true };
+});
+
+// Only Spotify Web API paths are proxied; the token never leaves this process.
+const SPOTIFY_API_PATH = /^\/v1\/[A-Za-z0-9_\-\/.,:;?=&%+!*'()~]*$/;
+
+ipcMain.handle('spotify-web:request', async (_e, method, apiPath, body) => {
+  method = String(method || 'GET').toUpperCase();
+  if (!['GET', 'PUT', 'POST', 'DELETE'].includes(method) || typeof apiPath !== 'string' || !SPOTIFY_API_PATH.test(apiPath)) {
+    return { error: 'Bad request.', status: 400 };
+  }
+  const send = token => fetch('https://api.spotify.com' + apiPath, {
+    method,
+    headers: {
+      Authorization: 'Bearer ' + token,
+      ...(body !== undefined && body !== null ? { 'Content-Type': 'application/json' } : {}),
+    },
+    // PUT/POST need a Content-Length even when empty, or Spotify answers 411.
+    body: body !== undefined && body !== null ? JSON.stringify(body) : (method === 'PUT' || method === 'POST' ? '' : undefined),
+  });
+  try {
+    let res = await send(await spotifyAccessToken());
+    if (res.status === 401 && spotifyAccount) {
+      spotifyAccount.expiresAt = 0;
+      res = await send(await spotifyAccessToken());
+    }
+    const text = await res.text();
+    let data = null;
+    if (text) { try { data = JSON.parse(text); } catch { data = null; } }
+    return { status: res.status, data, retryAfter: Number(res.headers.get('retry-after')) || 0 };
+  } catch (e) {
+    return { error: e.message, status: e.status || 0 };
+  }
+});
 
 ipcMain.handle('get-open-at-login', () => {
   try { return app.getLoginItemSettings().openAtLogin; } catch { return false; }
