@@ -372,6 +372,19 @@
     .fs-view.no-lyrics .fs-grid{grid-template-columns:minmax(0,1fr) 0fr;column-gap:0;padding:0 6vw}
     .fs-view.no-lyrics .fs-left{justify-self:center;max-width:min(540px,calc(100vh - 380px));text-align:center}
     .fs-view.no-lyrics .fs-right{visibility:hidden}
+    .sp-like.on svg{fill:#1ed760;stroke:#1ed760}
+    .sp-tile-art{position:relative}
+    .sp-tile-x{position:absolute;top:8px;right:8px;z-index:4;width:26px;height:26px;padding:0;border-radius:50%;border:none;background:#e22134;color:#fff;font-size:19px;line-height:1;display:grid;place-items:center;cursor:pointer;opacity:0;transform:scale(.75);transition:opacity .15s,transform .15s,background .15s;box-shadow:0 4px 14px rgba(0,0,0,.45)}
+    .sp-tile:hover .sp-tile-x{opacity:1;transform:scale(1)}
+    .sp-tile-x:hover{background:#ff3b4f;transform:scale(1.12)}
+    .sp-tile.removing{opacity:0;transform:scale(.9);transition:opacity .22s ease,transform .22s ease;pointer-events:none}
+    .sp-like:disabled{opacity:.35;cursor:default}
+    .sp-tile-art.sp-tile-new{display:grid;place-items:center;background:linear-gradient(135deg,#2a2a2a,#1c1c1c);color:#b3b3b3;font-size:46px;font-weight:300}
+    .sp-tile:hover .sp-tile-art.sp-tile-new{color:#fff}
+    .sp-local-actions{display:flex;gap:8px;margin:2px 0 16px}
+    .sp-optional{margin:34px 0 10px;border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px 16px;background:rgba(255,255,255,.03)}
+    .sp-optional summary{cursor:pointer;color:#b3b3b3;font-size:13px;font-weight:600}
+    .sp-optional[open] summary{margin-bottom:12px}
     .st-view.active{display:block;animation:st-view-in .28s cubic-bezier(.22,1,.36,1)}
     @keyframes st-view-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
     .st-title{font-size:32px;font-weight:800;letter-spacing:-.02em;padding:28px 0 18px;color:#fff}
@@ -890,7 +903,7 @@
       <button class="st-nav-item" data-view="presets"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="m12 2.5 2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z"/></svg><span>Presets</span></button>
     </nav>
     <nav class="st-card st-nav sp-nav">
-      <div class="sp-nav-label">Spotify</div>
+      <div class="sp-nav-label">Music</div>
       <button class="st-nav-item small" data-view="sp-home"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3.2 2.5 11h2.7v9.8h5.3v-6h3v6h5.3V11h2.7z"/></svg><span>Home</span></button>
       <button class="st-nav-item small" data-view="sp-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4.8-4.8"/></svg><span>Search</span></button>
       <button class="st-nav-item small" data-view="sp-library"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 3v18M9 3v18M14 4l6 16"/></svg><span>Your Library</span></button>
@@ -940,8 +953,8 @@
       <h1 class="st-title">Your Library</h1>
       <div class="sp-chips" id="spLibChips">
         <button data-sp-lib="playlists">Playlists</button>
-        <button data-sp-lib="albums">Albums</button>
-        <button data-sp-lib="artists">Artists</button>
+        <button data-sp-lib="albums" data-sp-only>Albums</button>
+        <button data-sp-lib="artists" data-sp-only>Artists</button>
         <button data-sp-lib="liked">Liked Songs</button>
         <button data-sp-lib="recent">Recently played</button>
       </div>
@@ -974,6 +987,7 @@
             <button class="st-ctl st-ctl-play big" id="spNowPlay" onclick="spotifyCommand('toggle')" title="Play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.14v13.72a1 1 0 0 0 1.52.85l10.29-6.86a1 1 0 0 0 0-1.7L9.52 4.29A1 1 0 0 0 8 5.14z"/></svg></button>
             <button class="st-ctl" onclick="spotifyCommand('next')" title="Next"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 5.5v13a1 1 0 0 0 1.55.83L15 13.5V18a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-1a1 1 0 0 0-1 1v4.5L6.55 4.67A1 1 0 0 0 5 5.5z"/></svg></button>
             <button class="st-ctl" id="spNowRepeat" onclick="spotifyCommand('repeat')" title="Repeat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="m7 22-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/></svg></button>
+            <button class="st-ctl sp-like" id="spNowLike" onclick="spLikeCurrent()" title="Save to Liked Songs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 1 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"/></svg></button>
           </div>
           <div class="sp-now-vol">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg>
@@ -2022,7 +2036,7 @@ function catalogBuildOrder(startIndex) {
 
 function catalogStart(tracks, index, contextUri) {
   const wanted = (tracks || [])[index]?.uri;
-  catalog.tracks = (tracks || []).filter(t => t && t.uri && /^spotify:track:/.test(t.uri) && !t.is_local);
+  catalog.tracks = (tracks || []).filter(t => t && t.uri && /^(spotify|deezer):track:/.test(t.uri) && !t.is_local);
   if (!catalog.tracks.length) { showToast('Nothing playable here.', ''); return; }
   let i = catalog.tracks.findIndex(t => t.uri === wanted);
   if (i < 0) i = catalog.shuffle ? Math.floor(Math.random() * catalog.tracks.length) : 0;
@@ -2033,8 +2047,9 @@ function catalogStart(tracks, index, contextUri) {
 }
 
 async function catalogPlayContext(uri) {
+  const [provider, kind, id] = String(uri).split(':');
+  if (provider === 'deezer' || provider === 'local') { catalogPlayFree(uri, provider, kind, id); return; }
   if (!spWeb.connected) { showToast('Connect your Spotify account first.', ''); return; }
-  const [, kind, id] = String(uri).split(':');
   const eid = encodeURIComponent(id || '');
   let tracks = [];
   try {
@@ -2063,7 +2078,7 @@ async function catalogPlayContext(uri) {
 }
 
 function catalogQuery(t) {
-  return { id: t.id || String(t.uri).split(':')[2], title: t.name, artists: (t.artists || []).map(a => a.name).filter(Boolean), durationMs: t.duration_ms || 0 };
+  return { provider: String(t.uri).split(':')[0], id: String(t.uri).split(':')[2] || t.id, title: t.name, artists: (t.artists || []).map(a => a.name).filter(Boolean), durationMs: t.duration_ms || 0 };
 }
 
 function catalogPauseSpotify() {
@@ -2093,6 +2108,7 @@ async function catalogPlayIndex(i, { auto = false } = {}) {
     return;
   }
   catalog.fails = 0;
+  mlRecordPlay(t);
   const file = catalogFile(t);
   file.resolvedSrc = r.path || r.streamUrl;
   await soundpadPlayFile(file);
@@ -2186,6 +2202,7 @@ function catalogRenderNow() {
   }
   spTickNow();
   if (studioView === 'sp-now') catalogRenderQueue();
+  spSyncLikeButtons();
 }
 
 setTimeout(() => document.getElementById('spPlayInAppToggle')?.classList.toggle('on', spPlayInApp), 0);
@@ -2315,7 +2332,7 @@ function fsTick(now) {
   if (glow) { if (cover) { if (glow.getAttribute('src') !== cover) glow.setAttribute('src', cover); } else glow.removeAttribute('src'); }
   const cat = !spotify && catalogShowing() ? catalogTrack() : null;
   set('fsAlbum', spotify ? (spotifyState?.album || '') : (cat?.album?.name || ''));
-  set('fsSource', spotify ? 'Playing on Spotify' : cat ? 'Spotify · in Custom Mic' : 'Custom Mic');
+  set('fsSource', spotify ? 'Playing on Spotify' : cat ? (/^spotify:/.test(cat.uri) ? 'Spotify · in Custom Mic' : 'Custom Mic') : 'Custom Mic');
   const art = document.getElementById('fsCover');
   if (art) {
     if (cover) { if (art.getAttribute('src') !== cover) art.setAttribute('src', cover); art.hidden = false; }
@@ -3419,6 +3436,27 @@ async function spAction(action, el) {
     catch { showToast(spWeb.redirectUri, ''); }
   } else if (action === 'back') {
     setStudioView(spWeb.back || 'sp-home');
+  } else if (action === 'ml-new') {
+    const name = await askPrompt('Name your new playlist:', '');
+    if (!name?.trim()) return;
+    const pl = mlCreatePlaylist(name);
+    spOpen('local-playlist:' + pl.id);
+  } else if (action === 'ml-import') {
+    const link = await askPrompt('Paste a Spotify playlist link:', '');
+    if (link?.trim()) mlImportSpotifyPlaylist(link);
+  } else if (action === 'ml-rename') {
+    const pl = mlLoad().playlists.find(p => p.id === el.dataset.id);
+    if (!pl) return;
+    const name = await askPrompt('Rename playlist:', pl.name);
+    if (name?.trim()) mlUpdatePlaylist(pl.id, p => { p.name = name.trim(); });
+  } else if (action === 'ml-delete') {
+    const lib = mlLoad();
+    const pl = lib.playlists.find(p => p.id === el.dataset.id);
+    if (!pl) return;
+    lib.playlists = lib.playlists.filter(p => p.id !== pl.id);
+    mlSave(lib);
+    showToast('Deleted "' + pl.name + '".', '');
+    setStudioView('sp-playlists');
   }
 }
 
@@ -3547,7 +3585,7 @@ async function spPlay(body) {
 
 function spPlayUri(uri) {
   if (!uri) return;
-  if (spPlayInApp) { catalogPlayContext(uri); return; }
+  if (spPlayInApp || !spWeb.connected || /^(deezer|local):/.test(uri)) { catalogPlayContext(uri); return; }
   if (/^spotify:(track|episode):/.test(uri)) spPlay({ uris: [uri] });
   else spPlay({ context_uri: uri });
 }
@@ -3556,7 +3594,7 @@ function spPlayFromList(listId, index) {
   const list = spLists.get(listId);
   const track = list?.tracks[index];
   if (!track) return;
-  if (spPlayInApp) {
+  if (spPlayInApp || !spWeb.connected || !/^spotify:/.test(track.uri)) {
     if (listId === 'queue' && catalog.tracks.length) {
       const i = catalog.tracks.findIndex(t => t.uri === track.uri);
       if (i >= 0) { catalog.pos = catalog.order.indexOf(i); catalogPlayIndex(i); return; }
@@ -3644,13 +3682,456 @@ function spHero(img, eyebrow, title, meta, playUri, description = '', round = fa
   <div class="st-actions"><button class="st-play-big sp-green" data-sp-hero-play="${esc(playUri || '')}" title="Play">${ST_ICON_PLAY}</button></div>`;
 }
 
+/* ── free catalog (no account) and local library ── */
+// Connecting Spotify is optional. Without it the music pages use Deezer's
+// public catalog, and Liked Songs / playlists / recently played are kept in
+// Custom Mic itself. Everything plays through Custom Mic's own player.
+
+async function dzApi(path) {
+  const r = await window.api.deezerGet(path);
+  if (!r || r.error) throw new Error(r?.error || 'No response from the music catalog.');
+  return r.data;
+}
+
+function dzImages(o, prefix = 'cover') {
+  if (!o) return [];
+  return [['_small', 56], ['_medium', 250], ['_big', 500], ['_xl', 1000]]
+    .map(([s, w]) => ({ url: o[prefix + s], width: w })).filter(i => i.url);
+}
+
+// Deezer track -> the same shape the Spotify pages and the player use.
+function dzTrack(t, album) {
+  if (!t || !t.id) return null;
+  const al = album && album.cover_small ? album : (t.album || album || {});
+  const seen = new Set();
+  const people = (t.contributors && t.contributors.length ? t.contributors : [t.artist]).filter(a => a && a.name && !seen.has(a.name) && seen.add(a.name));
+  return {
+    uri: 'deezer:track:' + t.id, id: String(t.id), provider: 'deezer',
+    name: t.title || t.title_short || 'Unknown',
+    artists: people.map(a => ({ name: a.name, id: a.id })),
+    album: { id: al.id, name: al.title || '', images: dzImages(al) },
+    duration_ms: (Number(t.duration) || 0) * 1000,
+    explicit: !!t.explicit_lyrics,
+  };
+}
+
+const ML_KEY = 'music-library';
+function mlLoad() {
+  try {
+    const d = JSON.parse(localStorage.getItem(ML_KEY) || '{}');
+    return { liked: Array.isArray(d.liked) ? d.liked : [], playlists: Array.isArray(d.playlists) ? d.playlists : [], recent: Array.isArray(d.recent) ? d.recent : [] };
+  } catch { return { liked: [], playlists: [], recent: [] }; }
+}
+function mlSave(lib) {
+  try { localStorage.setItem(ML_KEY, JSON.stringify(lib)); }
+  catch (e) { showToast('Could not save your library: ' + e.message, 'error'); }
+}
+function mlSlim(t) {
+  return {
+    uri: t.uri, id: t.id || String(t.uri).split(':')[2], provider: t.provider || String(t.uri).split(':')[0],
+    name: t.name, artists: (t.artists || []).map(a => ({ name: a.name, id: a.id })),
+    album: { id: t.album?.id, name: t.album?.name || '', images: t.album?.images || [] },
+    duration_ms: t.duration_ms || 0, explicit: !!t.explicit,
+  };
+}
+function mlIsLiked(uri) { return !!uri && mlLoad().liked.some(t => t.uri === uri); }
+function mlToggleLike(track) {
+  if (!track?.uri) return;
+  const lib = mlLoad();
+  const i = lib.liked.findIndex(t => t.uri === track.uri);
+  if (i >= 0) { lib.liked.splice(i, 1); showToast('Removed from Liked Songs.', ''); }
+  else { lib.liked.unshift(mlSlim(track)); showToast('Saved to Liked Songs.', 'success'); }
+  mlSave(lib);
+  mlRefreshViews();
+}
+function mlRecordPlay(track) {
+  if (!track?.uri) return;
+  const lib = mlLoad();
+  lib.recent = [mlSlim(track), ...lib.recent.filter(t => t.uri !== track.uri)].slice(0, 50);
+  mlSave(lib);
+}
+function mlCreatePlaylist(name, tracks = [], extra = {}) {
+  const lib = mlLoad();
+  const pl = { id: 'pl' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: String(name || '').trim() || 'My playlist', tracks: tracks.map(mlSlim), created: Date.now(), ...extra };
+  lib.playlists.unshift(pl);
+  mlSave(lib);
+  mlRefreshViews();
+  return pl;
+}
+function mlUpdatePlaylist(id, change) {
+  const lib = mlLoad();
+  const pl = lib.playlists.find(p => p.id === id);
+  if (!pl) return;
+  change(pl);
+  mlSave(lib);
+  mlRefreshViews();
+}
+function mlAddToPlaylist(id, track) {
+  const pl = mlLoad().playlists.find(p => p.id === id);
+  if (!pl) return;
+  if (pl.tracks.some(t => t.uri === track.uri)) { showToast('Already in ' + pl.name + '.', ''); return; }
+  mlUpdatePlaylist(id, p => p.tracks.push(mlSlim(track)));
+  showToast('Added to ' + pl.name + '.', 'success');
+}
+function mlRemoveFromPlaylist(id, uri) {
+  mlUpdatePlaylist(id, p => { p.tracks = p.tracks.filter(t => t.uri !== uri); });
+}
+function mlRefreshViews() {
+  const home = document.getElementById('spHome');
+  if (home) home.dataset.loadedAt = '';
+  if (studioView === 'sp-detail' && /^(local-|liked)/.test(spWeb.detailTarget || '')) spOpen(spWeb.detailTarget);
+  else if (studioView === 'sp-playlists') spRenderPlaylists();
+  else if (studioView === 'sp-library') spRenderLibrary();
+  spSyncLikeButtons();
+}
+
+// Import any public Spotify playlist by link, no login. Songs are matched in
+// the free catalog for artwork; a song with no match keeps its Spotify entry.
+async function mlImportSpotifyPlaylist(link) {
+  const m = String(link || '').match(/playlist[\/:]([A-Za-z0-9]{10,40})/);
+  if (!m) { showToast("That doesn't look like a Spotify playlist link.", 'error'); return null; }
+  const toast = showProgressToast('Importing playlist…');
+  try {
+    const r = await window.api.spotifyWebPlaylistEmbed(m[1]);
+    if (!r?.tracks?.length) throw new Error(r?.error || 'No songs found. The playlist may be private.');
+    const out = [];
+    for (let i = 0; i < r.tracks.length; i++) {
+      const t = r.tracks[i];
+      toast.update('Importing playlist… ' + (i + 1) + ' / ' + r.tracks.length);
+      let match = null;
+      try {
+        const d = await dzApi('/search?limit=6&q=' + encodeURIComponent(((t.artists || [])[0]?.name || '') + ' ' + t.name));
+        const want = t.name.toLowerCase().split(' (')[0].split(' - ')[0];
+        match = (d?.data || []).map(x => dzTrack(x)).find(x => x && Math.abs(x.duration_ms - t.duration_ms) < 7000 && x.name.toLowerCase().includes(want)) || null;
+      } catch {}
+      out.push(match || t);
+      if (i % 8 === 7) await new Promise(res => setTimeout(res, 900));  // stay under the catalog's rate limit
+    }
+    const pl = mlCreatePlaylist(r.name || 'Imported playlist', out, { cover: r.cover || '', source: 'spotify:' + m[1] });
+    showToast('Imported ' + out.length + ' songs into "' + pl.name + '".', 'success');
+    spOpen('local-playlist:' + pl.id);
+    return pl;
+  } catch (e) {
+    showToast('Import failed: ' + e.message, 'error');
+    return null;
+  } finally {
+    toast.close();
+  }
+}
+
+function dzArtistTile(a) { return spTile('dz-artist:' + a.id, 'deezer:artist:' + a.id, a.picture_big || a.picture_medium || '', a.name, 'Artist', true); }
+function dzAlbumTile(a, sub) { return spTile('dz-album:' + a.id, 'deezer:album:' + a.id, a.cover_big || a.cover_medium || '', a.title, sub ?? (a.artist?.name || '')); }
+function dzPlaylistTile(p) { return spTile('dz-playlist:' + p.id, 'deezer:playlist:' + p.id, p.picture_big || p.picture_medium || '', p.title, 'Playlist' + (p.user?.name ? ' · ' + p.user.name : '')); }
+function mlPlaylistTile(p) { return spTile('local-playlist:' + p.id, 'local:playlist:' + p.id, p.cover || spImg(p.tracks[0]?.album?.images, 300), p.name, p.tracks.length + ' songs'); }
+
+function mlPlaylistsGrid() {
+  const lib = mlLoad();
+  return '<div class="sp-grid">' +
+    '<div class="sp-tile" data-sp-open="local-liked:me"><div class="sp-tile-art liked"><span>&#9829;</span></div><div class="sp-tile-title">Liked Songs</div><div class="sp-tile-sub">' + lib.liked.length + ' songs</div></div>' +
+    lib.playlists.map(mlPlaylistTile).join('') +
+    '<div class="sp-tile" data-sp-action="ml-new"><div class="sp-tile-art sp-tile-new"><span>+</span></div><div class="sp-tile-title">New playlist</div><div class="sp-tile-sub">Make your own</div></div>' +
+    '<div class="sp-tile" data-sp-action="ml-import"><div class="sp-tile-art sp-tile-new"><span>&#8615;</span></div><div class="sp-tile-title">Import Spotify playlist</div><div class="sp-tile-sub">Paste a link, no login</div></div>' +
+    '</div>';
+}
+
+function mlRenderLibrary(el, which) {
+  const lib = mlLoad();
+  if (which === 'liked') el.innerHTML = lib.liked.length ? spTrackList('library', lib.liked) : '<div class="sp-empty">Songs you like show up here.</div>';
+  else if (which === 'recent') el.innerHTML = lib.recent.length ? spTrackList('library', lib.recent) : '<div class="sp-empty">Songs you play show up here.</div>';
+  else el.innerHTML = mlPlaylistsGrid();
+  spMarkPlaying();
+}
+
+function spShortcut(open, art, name, liked) {
+  return '<div class="sp-shortcut" data-sp-open="' + esc(open) + '"><span class="sp-shortcut-art' + (liked ? ' liked' : '') + '">' +
+    (art ? '<img src="' + esc(art) + '" alt="">' : (liked ? '&#9829;' : '&#9835;')) + '</span><span>' + esc(name) + '</span></div>';
+}
+
+async function dzRenderHome(el) {
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  el.innerHTML = '<h1 class="sp-greeting">' + greeting + '</h1><div class="sp-loading">Loading music…</div>';
+  let chart = null;
+  try { chart = await dzApi('/chart/0?limit=20'); } catch {}
+  if (spWeb.connected) return;
+  const lib = mlLoad();
+  const shortcuts = spShortcut('local-liked:me', '', 'Liked Songs', true) +
+    lib.playlists.slice(0, 7).map(p => spShortcut('local-playlist:' + p.id, p.cover || spImg(p.tracks[0]?.album?.images, 64), p.name)).join('');
+  const topTracks = (chart?.tracks?.data || []).map(t => dzTrack(t)).filter(Boolean);
+  el.innerHTML = '<h1 class="sp-greeting">' + greeting + '</h1>' +
+    '<div class="sp-shortcuts">' + shortcuts + '</div>' +
+    (lib.recent.length ? spShelf('Recently played', lib.recent.slice(0, 12).map(t => spRecentTile(spTile(t.provider === 'deezer' && t.album?.id ? 'dz-album:' + t.album.id : '', t.uri, spImg(t.album?.images, 300), t.name, spArtists(t)), t.uri)).join('')) : '') +
+    (topTracks.length ? '<section class="sp-shelf"><h2>Top songs right now</h2>' + spTrackList('home-top', topTracks.slice(0, 10)) + '</section>' : '') +
+    spShelf('Popular albums', (chart?.albums?.data || []).map(a => dzAlbumTile(a)).join('')) +
+    spShelf('Popular artists', (chart?.artists?.data || []).map(dzArtistTile).join('')) +
+    spShelf('Trending playlists', (chart?.playlists?.data || []).map(dzPlaylistTile).join('')) +
+    (!chart ? '<div class="sp-empty">Could not load music right now. Check your internet connection.</div>' : '') +
+    '<details class="sp-optional"><summary>Have Spotify? Connect your account to also see your Spotify playlists (optional)</summary><div class="sp-account-host"></div></details>';
+  renderSpAccount();
+  spMarkPlaying();
+}
+
+async function dzRunSearch(el, query) {
+  const q = String(query || '').trim();
+  const seq = ++spWeb.searchSeq;
+  if (!q) { el.innerHTML = '<div class="sp-empty">Search for songs, artists, albums and playlists.</div>'; return; }
+  el.innerHTML = '<div class="sp-loading">Searching…</div>';
+  const enc = encodeURIComponent(q);
+  const [tr, ar, al, pl] = await Promise.all([
+    dzApi('/search?limit=15&q=' + enc).catch(() => null),
+    dzApi('/search/artist?limit=12&q=' + enc).catch(() => null),
+    dzApi('/search/album?limit=12&q=' + enc).catch(() => null),
+    dzApi('/search/playlist?limit=12&q=' + enc).catch(() => null),
+  ]);
+  if (seq !== spWeb.searchSeq) return;
+  if (!tr && !ar && !al && !pl) { el.innerHTML = '<div class="sp-empty">Search failed. Check your internet connection.</div>'; return; }
+  const tracks = (tr?.data || []).map(t => dzTrack(t)).filter(Boolean);
+  // Many small lookalike artist pages exist; the real one has the fans.
+  const artists = (ar?.data || []).slice().sort((a, b) => (b.nb_fan || 0) - (a.nb_fan || 0));
+  const albums = al?.data || [];
+  const playlists = pl?.data || [];
+  const exact = artists.find(a => a.name.toLowerCase() === q.toLowerCase());
+  let topHtml = '';
+  if (exact || tracks[0] || artists[0]) {
+    const isArtist = !!exact || !tracks[0];
+    const it = isArtist ? (exact || artists[0]) : tracks[0];
+    const img = isArtist ? (it.picture_big || '') : spImg(it.album?.images, 300);
+    topHtml = '<div class="sp-top"' + (isArtist ? ' data-sp-open="dz-artist:' + esc(it.id) + '"' : '') + '>' +
+      '<div class="sp-top-art' + (isArtist ? ' round' : '') + '">' + (img ? '<img src="' + esc(img) + '" alt="">' : '') + '</div>' +
+      '<div class="sp-top-name">' + esc(isArtist ? it.name : it.name) + '</div>' +
+      '<div class="sp-top-sub">' + (isArtist ? 'Artist' : 'Song · ' + esc(spArtists(it))) + '</div>' +
+      '<button class="sp-tile-play" data-sp-play="' + esc(isArtist ? 'deezer:artist:' + it.id : it.uri) + '" title="Play">' + ST_ICON_PLAY + '</button></div>';
+  }
+  el.innerHTML =
+    (topHtml || tracks.length ? '<div class="sp-search-top">' +
+      (topHtml ? '<section><h2>Top result</h2>' + topHtml + '</section>' : '') +
+      (tracks.length ? '<section><h2>Songs</h2>' + spTrackList('search', tracks.slice(0, 5), { showAlbum: false }) + '</section>' : '') +
+    '</div>' : '') +
+    spShelf('Artists', artists.map(dzArtistTile).join('')) +
+    spShelf('Albums', albums.map(a => dzAlbumTile(a, [a.record_type, a.artist?.name].filter(Boolean).join(' · '))).join('')) +
+    spShelf('Playlists', playlists.map(dzPlaylistTile).join('')) +
+    (!tracks.length && !artists.length && !albums.length && !playlists.length ? '<div class="sp-empty">No results for "' + esc(q) + '".</div>' : '');
+  spMarkPlaying();
+}
+
+async function dzOpen(el, kind, id, seq) {
+  try {
+    let hero = '';
+    let body = '';
+    const eid = encodeURIComponent(id || '');
+    if (kind === 'dz-album') {
+      const a = await dzApi('/album/' + eid);
+      const tracks = (a.tracks?.data || []).map(t => dzTrack(t, a)).filter(Boolean);
+      const who = a.contributors?.length ? a.contributors.map(c => c.name).join(', ') : a.artist?.name;
+      hero = spHero(a.cover_big || a.cover_xl || '', a.record_type === 'single' ? 'Single' : a.record_type === 'ep' ? 'EP' : 'Album', a.title,
+        [who, (a.release_date || '').slice(0, 4), tracks.length + ' songs'].filter(Boolean).join(' · '), 'deezer:album:' + a.id);
+      body = spTrackList('detail', tracks, { contextUri: 'deezer:album:' + a.id, showAlbum: false, showArt: false });
+    } else if (kind === 'dz-artist') {
+      const [a, top, albums, related] = await Promise.all([
+        dzApi('/artist/' + eid),
+        dzApi('/artist/' + eid + '/top?limit=10').catch(() => null),
+        dzApi('/artist/' + eid + '/albums?limit=40').catch(() => null),
+        dzApi('/artist/' + eid + '/related?limit=12').catch(() => null),
+      ]);
+      hero = spHero(a.picture_big || a.picture_xl || '', 'Artist', a.name, a.nb_fan ? Number(a.nb_fan).toLocaleString() + ' fans' : '', 'deezer:artist:' + a.id, '', true);
+      body = ((top?.data || []).length ? '<h2 class="sp-h2">Popular</h2>' + spTrackList('detail', top.data.map(t => dzTrack(t)).filter(Boolean)) : '') +
+        spShelf('Discography', (albums?.data || []).map(x => dzAlbumTile(x, [(x.release_date || '').slice(0, 4), x.record_type].filter(Boolean).join(' · '))).join('')) +
+        spShelf('Fans also like', (related?.data || []).map(dzArtistTile).join(''));
+    } else if (kind === 'dz-playlist') {
+      const p = await dzApi('/playlist/' + eid);
+      let raw = p.tracks?.data || [];
+      if ((p.nb_tracks || 0) > raw.length) {
+        try { raw = raw.concat((await dzApi('/playlist/' + eid + '/tracks?index=' + raw.length + '&limit=' + Math.min(600, p.nb_tracks - raw.length)))?.data || []); } catch {}
+      }
+      const tracks = raw.map(t => dzTrack(t)).filter(Boolean);
+      hero = spHero(p.picture_big || p.picture_xl || '', 'Playlist', p.title, [p.creator?.name || p.user?.name, tracks.length + ' songs'].filter(Boolean).join(' · '), 'deezer:playlist:' + p.id, p.description || '');
+      body = spTrackList('detail', tracks, { contextUri: 'deezer:playlist:' + p.id });
+    } else if (kind === 'local-liked') {
+      const lib = mlLoad();
+      hero = spHero('', 'Playlist', 'Liked Songs', lib.liked.length + ' songs · saved in Custom Mic', 'local:liked', '', false, true);
+      body = lib.liked.length ? spTrackList('detail', lib.liked, { contextUri: 'local:liked' })
+        : '<div class="sp-empty">Songs you like show up here. Right-click a song, or press the heart on Now Playing.</div>';
+    } else if (kind === 'local-playlist') {
+      const p = mlLoad().playlists.find(x => x.id === id);
+      if (!p) { el.innerHTML = '<div class="sp-empty">This playlist was deleted.</div>'; return; }
+      hero = spHero(p.cover || spImg(p.tracks[0]?.album?.images, 300), 'Playlist', p.name, p.tracks.length + ' songs · saved in Custom Mic', 'local:playlist:' + p.id);
+      body = '<div class="sp-local-actions"><button class="sp-pill" data-sp-action="ml-rename" data-id="' + esc(p.id) + '">Rename</button>' +
+        '<button class="sp-pill" data-sp-action="ml-delete" data-id="' + esc(p.id) + '">Delete playlist</button></div>' +
+        (p.tracks.length ? spTrackList('detail', p.tracks, { contextUri: 'local:playlist:' + p.id })
+          : '<div class="sp-empty">Right-click any song and choose "Add to ' + esc(p.name) + '".</div>');
+    } else {
+      return;
+    }
+    if (seq !== spWeb.detailSeq) return;
+    el.innerHTML = hero + body;
+    spMarkPlaying();
+  } catch (e) {
+    if (seq === spWeb.detailSeq) el.innerHTML = '<div class="sp-empty">' + esc('Could not load this: ' + e.message) + '</div>';
+  }
+}
+
+async function catalogPlayFree(uri, provider, kind, id) {
+  let tracks = [];
+  try {
+    if (provider === 'local') {
+      const lib = mlLoad();
+      tracks = kind === 'liked' ? lib.liked : (lib.playlists.find(p => p.id === id)?.tracks || []);
+    } else if (kind === 'track') {
+      tracks = [dzTrack(await dzApi('/track/' + encodeURIComponent(id)))];
+    } else if (kind === 'album') {
+      const a = await dzApi('/album/' + encodeURIComponent(id));
+      tracks = (a.tracks?.data || []).map(t => dzTrack(t, a));
+    } else if (kind === 'artist') {
+      tracks = ((await dzApi('/artist/' + encodeURIComponent(id) + '/top?limit=50'))?.data || []).map(t => dzTrack(t));
+    } else if (kind === 'playlist') {
+      tracks = ((await dzApi('/playlist/' + encodeURIComponent(id)))?.tracks?.data || []).map(t => dzTrack(t));
+    }
+  } catch (e) {
+    showToast('Could not load songs: ' + e.message, 'error');
+    return;
+  }
+  tracks = tracks.filter(Boolean);
+  if (!tracks.length) { showToast('Nothing to play here yet.', ''); return; }
+  catalogStart(tracks, catalog.shuffle ? Math.floor(Math.random() * tracks.length) : 0, uri);
+}
+
+// The song showing on Now Playing, as a track object, for the heart button.
+function spCurrentTrackObj() {
+  if (catalogShowing()) return catalogTrack();
+  const s = spotifyState;
+  if (s?.available && s.uri && /^spotify:track:/.test(s.uri)) {
+    return { uri: s.uri, id: s.uri.split(':')[2], provider: 'spotify', name: s.title || '',
+      artists: String(s.artist || '').split(/,\s*/).filter(Boolean).map(name => ({ name })),
+      album: { name: s.album || '', images: spotifyCover ? [{ url: spotifyCover, width: 640 }] : [] },
+      duration_ms: Number(s.endMs) || 0 };
+  }
+  return null;
+}
+function spLikeCurrent() {
+  const t = spCurrentTrackObj();
+  if (t) mlToggleLike(t);
+}
+function spSyncLikeButtons() {
+  const btn = document.getElementById('spNowLike');
+  if (!btn) return;
+  const t = spCurrentTrackObj();
+  btn.disabled = !t;
+  const on = !!t && mlIsLiked(t.uri);
+  btn.classList.toggle('on', on);
+  btn.title = on ? 'Remove from Liked Songs' : 'Save to Liked Songs';
+}
+
+function openCtxMenu(event, title, items) {
+  event.preventDefault();
+  event.stopPropagation();
+  closeSoundpadMenu();
+  const menu = document.createElement('div');
+  menu.className = 'ctx-menu';
+  menu.innerHTML = '<div class="ctx-title">' + esc(title) + '</div>' +
+    items.map((item, n) => item.sep ? '<div class="ctx-sep"></div>'
+      : '<button class="ctx-item' + (item.danger ? ' danger' : '') + '" data-n="' + n + '"><span class="ctx-icon">' + item.icon + '</span>' + esc(item.label) + '</button>').join('');
+  document.body.appendChild(menu);
+  ctxMenuEl = menu;
+  const pad = 8;
+  const rect = menu.getBoundingClientRect();
+  let x = event.clientX, y = event.clientY;
+  if (x + rect.width + pad > window.innerWidth) x = Math.max(pad, window.innerWidth - rect.width - pad);
+  if (y + rect.height + pad > window.innerHeight) y = Math.max(pad, window.innerHeight - rect.height - pad);
+  menu.style.left = x + 'px';
+  menu.style.top = y + 'px';
+  menu.querySelectorAll('.ctx-item').forEach(btn => {
+    btn.onclick = e => {
+      e.stopPropagation();
+      const item = items[Number(btn.dataset.n)];
+      closeSoundpadMenu();
+      try { item?.run(); } catch (err) { showToast('Failed: ' + err.message, 'error'); }
+    };
+  });
+  requestAnimationFrame(() => menu.classList.add('open'));
+  document.addEventListener('mousedown', onCtxOutside, true);
+  document.addEventListener('keydown', onCtxKey, true);
+  window.addEventListener('blur', closeSoundpadMenu);
+  window.addEventListener('resize', closeSoundpadMenu);
+}
+
+function spOpenTrackMenu(event, track, listId, index) {
+  const lib = mlLoad();
+  const liked = lib.liked.some(t => t.uri === track.uri);
+  const target = spWeb.detailTarget || '';
+  const items = [
+    { icon: '&#9654;', label: 'Play', run: () => spPlayFromList(listId, index) },
+    { icon: liked ? '&#9829;' : '&#9825;', label: liked ? 'Remove from Liked Songs' : 'Save to Liked Songs', run: () => mlToggleLike(track) },
+    { sep: true },
+    ...lib.playlists.slice(0, 10).map(p => ({ icon: '+', label: 'Add to ' + p.name, run: () => mlAddToPlaylist(p.id, track) })),
+    { icon: '&#10010;', label: 'New playlist with this song…', run: async () => {
+        const name = await askPrompt('Name your new playlist:', '');
+        if (name?.trim()) { mlCreatePlaylist(name, [track]); showToast('Created "' + name.trim() + '".', 'success'); }
+      } },
+  ];
+  if (/^deezer:/.test(track.uri)) {
+    const links = [];
+    if (track.artists?.[0]?.id) links.push({ icon: '&#9737;', label: 'Go to artist', run: () => spOpen('dz-artist:' + track.artists[0].id) });
+    if (track.album?.id) links.push({ icon: '&#9635;', label: 'Go to album', run: () => spOpen('dz-album:' + track.album.id) });
+    if (links.length) items.push({ sep: true }, ...links);
+  }
+  if (listId === 'detail' && target.startsWith('local-playlist:')) {
+    items.push({ sep: true }, { icon: '&times;', label: 'Remove from this playlist', danger: true, run: () => mlRemoveFromPlaylist(target.split(':')[1], track.uri) });
+  }
+  openCtxMenu(event, track.name, items);
+}
+
+document.addEventListener('contextmenu', e => {
+  const row = e.target.closest?.('#studioShell .sp-track[data-sp-track]');
+  if (!row) return;
+  const listEl = row.closest('[data-sp-list]');
+  const list = spLists.get(listEl?.dataset.spList || '');
+  const index = Number(row.dataset.spTrack);
+  const track = list?.tracks[index];
+  if (track) spOpenTrackMenu(e, track, listEl.dataset.spList, index);
+});
+
+function spRecentHidden() {
+  try { return JSON.parse(localStorage.getItem('recent-hidden') || '{}') || {}; } catch { return {}; }
+}
+function spHideRecent(uri) {
+  if (!uri) return;
+  const hidden = spRecentHidden();
+  hidden[uri] = Date.now();
+  const keys = Object.keys(hidden);
+  if (keys.length > 400) keys.sort((a, b) => hidden[a] - hidden[b]).slice(0, keys.length - 400).forEach(k => delete hidden[k]);
+  try { localStorage.setItem('recent-hidden', JSON.stringify(hidden)); } catch {}
+  const lib = mlLoad();
+  const before = lib.recent.length;
+  lib.recent = lib.recent.filter(t => t.uri !== uri);
+  if (lib.recent.length !== before) mlSave(lib);
+}
+// Adds the hover x to a Recently played tile.
+function spRecentTile(tileHtml, uri) {
+  return tileHtml.replace(/(<div class="sp-tile-art[^"]*">)/, '$1<button class="sp-tile-x" data-sp-remove-recent="' + esc(uri) + '" title="Remove from Recently played" aria-label="Remove from Recently played">&times;</button>');
+}
+document.addEventListener('click', e => {
+  const x = e.target.closest?.('[data-sp-remove-recent]');
+  if (!x) return;
+  e.preventDefault();
+  e.stopPropagation();   // don't also open or play the tile underneath
+  spHideRecent(x.dataset.spRemoveRecent);
+  const tile = x.closest('.sp-tile');
+  if (!tile) return;
+  tile.classList.add('removing');
+  setTimeout(() => {
+    const shelf = tile.closest('.sp-shelf');
+    tile.remove();
+    if (shelf && !shelf.querySelector('.sp-tile')) shelf.remove();
+  }, 230);
+}, true);
+
 /* ── pages ── */
 
 async function spRenderHome() {
   const el = document.getElementById('spHome');
   if (!el) return;
   el.dataset.loadedAt = String(Date.now());
-  if (spNeedsAccount(el)) return;
+  if (!spWeb.connected) { dzRenderHome(el); return; }
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
   el.innerHTML = `<h1 class="sp-greeting">${greeting}</h1><div class="sp-loading">Loading your music…</div>`;
@@ -3662,7 +4143,8 @@ async function spRenderHome() {
   if (!spWeb.connected) return;
   const pls = (playlists?.items || []).filter(Boolean);
   const seen = new Set();
-  const recentTracks = (recent?.items || []).map(i => i.track).filter(t => t && t.id && !seen.has(t.id) && seen.add(t.id));
+  const hiddenRecent = spRecentHidden();
+  const recentTracks = (recent?.items || []).filter(i => !(hiddenRecent[i.track?.uri] >= Date.parse(i.played_at || 0))).map(i => i.track).filter(t => t && t.id && !seen.has(t.id) && seen.add(t.id));
   const albums = new Map();
   recentTracks.forEach(t => { if (t.album?.id && !albums.has(t.album.id)) albums.set(t.album.id, t.album); });
 
@@ -3674,7 +4156,7 @@ async function spRenderHome() {
 
   el.innerHTML = `<h1 class="sp-greeting">${greeting}</h1>
     <div class="sp-shortcuts">${shortcuts}</div>
-    ${spShelf('Recently played', recentTracks.slice(0, 12).map(t => spTile('album:' + (t.album?.id || ''), t.uri, spImg(t.album?.images, 300), t.name, spArtists(t))).join(''))}
+    ${spShelf('Recently played', recentTracks.slice(0, 12).map(t => spRecentTile(spTile('album:' + (t.album?.id || ''), t.uri, spImg(t.album?.images, 300), t.name, spArtists(t)), t.uri)).join(''))}
     ${spShelf('Jump back in', [...albums.values()].slice(0, 12).map(a => spTile('album:' + a.id, a.uri, spImg(a.images, 300), a.name, (a.artists || []).map(x => x.name).join(', '))).join(''))}
     ${spShelf('Your top artists', (top?.items || []).map(a => spTile('artist:' + a.id, a.uri, spImg(a.images, 300), a.name, 'Artist', true)).join(''))}
     ${spShelf('Your playlists', pls.map(p => spTile('playlist:' + p.id, p.uri, spImg(p.images, 300), p.name, 'By ' + (p.owner?.display_name || 'you'))).join(''))}
@@ -3689,7 +4171,7 @@ function spSearchInput(value) {
 async function spRunSearch(query) {
   const el = document.getElementById('spSearchResults');
   if (!el) return;
-  if (spNeedsAccount(el)) return;
+  if (!spWeb.connected) { dzRunSearch(el, query); return; }
   const q = String(query || '').trim();
   const seq = ++spWeb.searchSeq;
   if (!q) { el.innerHTML = '<div class="sp-empty">Search for songs, artists, albums and playlists.</div>'; return; }
@@ -3744,10 +4226,12 @@ function spPlaylistGrid(items) {
 
 async function spRenderLibrary(tab) {
   if (tab) spWeb.library = tab;
+  if (!spWeb.connected && (spWeb.library === 'albums' || spWeb.library === 'artists')) spWeb.library = 'playlists';
   const el = document.getElementById('spLibrary');
   if (!el) return;
   document.querySelectorAll('#spLibChips [data-sp-lib]').forEach(c => c.classList.toggle('on', c.dataset.spLib === spWeb.library));
-  if (spNeedsAccount(el)) return;
+  document.querySelectorAll('#spLibChips [data-sp-only]').forEach(c => { c.hidden = !spWeb.connected; });
+  if (!spWeb.connected) { mlRenderLibrary(el, spWeb.library); return; }
   const which = spWeb.library;
   el.innerHTML = '<div class="sp-loading">Loading…</div>';
   try {
@@ -3765,7 +4249,8 @@ async function spRenderLibrary(tab) {
       html = spTrackList('library', items.map(i => i.track));
     } else if (which === 'recent') {
       const d = await spApi('GET', '/v1/me/player/recently-played?limit=50');
-      html = spTrackList('library', (d?.items || []).map(i => i.track));
+      const hiddenRecent = spRecentHidden();
+      html = spTrackList('library', (d?.items || []).filter(i => !(hiddenRecent[i.track?.uri] >= Date.parse(i.played_at || 0))).map(i => i.track));
     }
     if (which !== spWeb.library) return;
     el.innerHTML = html.replace(/<div class="sp-grid">\s*<\/div>/, '') || '<div class="sp-empty">Nothing here yet.</div>';
@@ -3778,22 +4263,24 @@ async function spRenderLibrary(tab) {
 async function spRenderPlaylists() {
   const el = document.getElementById('spPlaylists');
   if (!el) return;
-  if (spNeedsAccount(el)) return;
+  if (!spWeb.connected) { el.innerHTML = mlPlaylistsGrid(); return; }
   el.innerHTML = '<div class="sp-loading">Loading…</div>';
-  try { el.innerHTML = spPlaylistGrid(await spAll('/v1/me/playlists?limit=50', 300)); }
+  try { el.innerHTML = '<h2 class="sp-h2">In Custom Mic</h2>' + mlPlaylistsGrid() + '<h2 class="sp-h2">On Spotify</h2>' + spPlaylistGrid(await spAll('/v1/me/playlists?limit=50', 300)); }
   catch (e) { el.innerHTML = '<div class="sp-empty">' + esc('Could not load playlists: ' + e.message) + '</div>'; }
 }
 
 async function spOpen(target) {
   const [kind, id] = String(target).split(':');
-  if (!kind || (kind !== 'liked' && !id)) return;
+  if (!kind || (kind !== 'liked' && kind !== 'local-liked' && !id)) return;
   if (studioView !== 'sp-detail') spWeb.back = studioView || 'sp-home';
   setStudioView('sp-detail');
   const el = document.getElementById('spDetail');
   if (!el) return;
-  if (spNeedsAccount(el)) return;
+  spWeb.detailTarget = String(target);
   el.innerHTML = '<div class="sp-loading">Loading…</div>';
   const seq = ++spWeb.detailSeq;
+  if (/^(dz-|local-)/.test(kind) || (kind === 'liked' && !spWeb.connected)) { dzOpen(el, kind === 'liked' ? 'local-liked' : kind, id, seq); return; }
+  if (!spWeb.connected) { el.innerHTML = '<div class="sp-empty">Connect Spotify in Settings to open this.</div>'; return; }
   try {
     let hero = '';
     let body = '';
@@ -3866,7 +4353,7 @@ function spRenderNow() {
   setText('spNowTitle', live ? (s.title || 'Unknown') : 'Nothing playing');
   setText('spNowSub', live
     ? [s.artist, s.album].filter(Boolean).join(' · ')
-    : (spWeb.connected ? 'Pick something from Home, Search or Your Library.' : 'Play something in Spotify, or connect your account.'));
+    : 'Pick something from Home, Search or Your Library.');
   const device = spWeb.player?.device;
   setText('spNowDevice', device ? 'Playing on ' + device.name : (live ? 'Spotify' : ''));
 
@@ -3896,6 +4383,7 @@ function spRenderNow() {
   }
   spTickNow();
   if (studioView === 'sp-now') spLoadQueue();
+  spSyncLikeButtons();
 }
 
 function spTickNow() {

@@ -1570,9 +1570,10 @@ ipcMain.handle('spotify-web:playlist-embed', async (_e, id) => {
     const res = await fetch('https://open.spotify.com/embed/playlist/' + id, { headers: { 'User-Agent': 'Mozilla/5.0' } });
     const html = await res.text();
     const m = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
-    const list = m && JSON.parse(m[1])?.props?.pageProps?.state?.data?.entity?.trackList;
+    const entity = m && JSON.parse(m[1])?.props?.pageProps?.state?.data?.entity;
+    const list = entity?.trackList;
     if (!Array.isArray(list)) return { error: 'No track list.' };
-    return { tracks: list.filter(t => /^spotify:track:/.test(t.uri || '')).map(t => ({
+    return { name: entity.name || entity.title || '', cover: entity.coverArt?.sources?.[0]?.url || '', tracks: list.filter(t => /^spotify:track:/.test(t.uri || '')).map(t => ({
       uri: t.uri, id: t.uri.split(':')[2], name: t.title || '', duration_ms: t.duration || 0,
       explicit: !!t.isExplicit, artists: String(t.subtitle || '').split(/,\s*/).filter(Boolean).map(name => ({ name })),
     })) };
@@ -1664,11 +1665,26 @@ async function catalogPick(track) {
   return entries.map(c => ({ c, s: catalogScore(c, track) })).sort((a, b) => b.s - a.s)[0].c;
 }
 
+// Free music catalog for browsing without a Spotify account: Deezer's public
+// API needs no login or key. Only GET requests under api.deezer.com are made.
+const DEEZER_PATH = /^\/[A-Za-z0-9_\-\/.,:;?=&%+!*'()~]*$/;
+ipcMain.handle('deezer:get', async (_e, apiPath) => {
+  if (typeof apiPath !== 'string' || !DEEZER_PATH.test(apiPath)) return { error: 'Bad request.' };
+  try {
+    const res = await fetch('https://api.deezer.com' + apiPath, { headers: { Accept: 'application/json' } });
+    const data = await res.json();
+    if (data?.error) return { error: data.error.message || 'Catalog error', code: data.error.code || 0 };
+    return { data };
+  } catch (e) {
+    return { error: e.message };
+  }
+});
+
 ipcMain.handle('catalog:resolve', async (_e, track) => {
   try {
     const id = String(track?.id || '').replace(/[^A-Za-z0-9]/g, '');
     if (!id || !track?.title) return { error: 'Missing song info.' };
-    const source = 'https://open.spotify.com/track/' + id;
+    const source = (track.provider === 'deezer' ? 'https://www.deezer.com/track/' : 'https://open.spotify.com/track/') + id;
     const saved = readAudioCacheEntry(source);
     if (saved) return { path: saved.path, durationMs: saved.durationMs, cached: true };
     let resolved = onlineAudioCache.get(source);
