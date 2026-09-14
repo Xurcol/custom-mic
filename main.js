@@ -1592,6 +1592,80 @@ ipcMain.handle('get-cached-audio', (_e, url) => {
   return entry ? { path: entry.path, name: entry.name, durationMs: entry.durationMs } : null;
 });
 
+// ── Spotify songs played in Custom Mic ──
+// A Spotify track (title, artists, length) is matched to a YouTube upload and
+// played by the app's own audio engine. The best match is picked by length
+// and by avoiding live/sped-up/cover versions; the audio is then saved to the
+// cache so the next play of that song starts instantly.
+const CATALOG_BAD_WORDS = /\b(live|cover|remix|sped[ -]?up|slowed|reverb|nightcore|8d|karaoke|instrumental|acapella|a cappella|1 hour|loop|bass boosted|reaction|tutorial|piano|guitar)\b/i;
+
+function catalogScore(c, track) {
+  const title = String(c.title || '').toLowerCase();
+  const channel = String(c.channel || c.uploader || '').toLowerCase();
+  const want = String(track.title || '').toLowerCase();
+  const core = want.replace(/\(.*?\)|\[.*?\]/g, '').split(' - ')[0].trim();
+  let score = 0;
+  const dur = Number(c.duration) || 0;
+  const target = (Number(track.durationMs) || 0) / 1000;
+  if (target && dur) {
+    const diff = Math.abs(dur - target);
+    score -= diff <= 4 ? diff : diff <= 15 ? 6 + diff * 2 : 60 + diff;
+  }
+  if (core && title.includes(core)) score += 25;
+  const artists = (track.artists || []).map(a => String(a).toLowerCase()).filter(Boolean);
+  if (artists.some(a => channel.includes(a) || channel.replace(/\s+/g, '').includes(a.replace(/\s+/g, '')))) score += 20;
+  if (artists.some(a => title.includes(a))) score += 8;
+  if (/ - topic$/.test(channel)) score += 30;
+  if (/official audio|\baudio\b/.test(title)) score += 16;
+  if (/official (music )?video|\bmv\b/.test(title)) score -= 6;
+  const bad = title.match(CATALOG_BAD_WORDS);
+  if (bad && !want.includes(bad[1].toLowerCase())) score -= 45;
+  score += Math.log10((Number(c.view_count) || 0) + 1) * 2;
+  return score;
+}
+
+async function catalogPick(track) {
+  const main = (track.artists || [])[0] || '';
+  const query = (main + ' ' + track.title + ' audio').trim();
+  const raw = await runYtDlp('ytsearch8:' + query, { dumpSingleJson: true, flatPlaylist: true, noWarnings: true, ignoreErrors: true });
+  const entries = uniqueCandidates(Array.isArray(raw?.entries) ? raw.entries : [], null);
+  if (!entries.length) return null;
+  return entries.map(c => ({ c, s: catalogScore(c, track) })).sort((a, b) => b.s - a.s)[0].c;
+}
+
+ipcMain.handle('catalog:resolve', async (_e, track) => {
+  try {
+    const id = String(track?.id || '').replace(/[^A-Za-z0-9]/g, '');
+    if (!id || !track?.title) return { error: 'Missing song info.' };
+    const source = 'https://open.spotify.com/track/' + id;
+    const saved = readAudioCacheEntry(source);
+    if (saved) return { path: saved.path, durationMs: saved.durationMs, cached: true };
+    let resolved = onlineAudioCache.get(source);
+    if (!resolved || Date.now() - resolved.cachedAt > 8 * 60 * 1000) {
+      const pick = await catalogPick(track);
+      if (!pick) return { error: 'Could not find this song.' };
+      const streamUrl = await getAudioStreamForCandidate(getYtDlp(), pick);
+      resolved = {
+        source,
+        streamUrl,
+        title: track.title,
+        durationMs: Number(pick.duration) ? Math.round(Number(pick.duration) * 1000) : (Number(track.durationMs) || 0),
+        webpageUrl: pick.webpage_url,
+        thumbnail: '',
+        artist: (track.artists || []).join(', '),
+        match: pick.title || '',
+        cachedAt: Date.now(),
+      };
+      onlineAudioCache.set(source, resolved);
+    }
+    // Keep a copy for next time; this play streams meanwhile.
+    ensureLocalAudio(source).catch(() => {});
+    return { streamUrl: resolved.streamUrl, durationMs: resolved.durationMs, match: resolved.match };
+  } catch (e) {
+    return { error: normalizeYtDlpError(e) || e.message || 'Could not play this song.' };
+  }
+});
+
 ipcMain.handle('resolve-stream', async (_e, url) => {
   try {
     const info = await resolveOnlineAudioSource(url);

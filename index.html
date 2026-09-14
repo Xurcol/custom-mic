@@ -292,7 +292,7 @@
     .st-lyrics-line:hover{color:rgba(255,255,255,.62)}
     .st-lyrics-line.now{--d:0;transform:scale(1);opacity:1;filter:none;color:rgba(255,255,255,.34)}
     .ly-w{display:inline-block;white-space:pre;transition:transform .45s cubic-bezier(.22,1,.36,1),text-shadow .45s ease}
-    .st-lyrics-line.now .ly-w{background:linear-gradient(90deg,#fff calc(var(--p,0) * 1%),rgba(255,255,255,.34) calc(var(--p,0) * 1% + 12%));-webkit-background-clip:text;background-clip:text;color:transparent}
+    .st-lyrics-line.now .ly-w{background:linear-gradient(90deg,#fff calc(var(--p,0) * 1.12% - 12%),rgba(255,255,255,.34) calc(var(--p,0) * 1.12%));-webkit-background-clip:text;background-clip:text;color:transparent}
     .st-lyrics-line.now .ly-w.lit{transform:translateY(-2px);text-shadow:0 0 16px rgba(255,255,255,.5),0 0 38px rgba(255,255,255,.22)}
     .st-lyrics-line.now .ly-w.done{text-shadow:0 0 12px rgba(255,255,255,.28)}
     .st-lyrics-line.gap{display:flex;gap:14px;align-items:center;height:46px;margin-bottom:26px}
@@ -1005,15 +1005,6 @@
           <label>Main Output Device:</label>
           <select id="outputDevice" onchange="switchOutputDevice()"></select>
         </div>
-        <div class="output-select">
-          <label>Sample Rate:</label>
-          <select id="sampleRateSelect" onchange="applySampleRate()">
-            <option value="48000">48000 Hz</option>
-            <option value="44100">44100 Hz</option>
-            <option value="">Follow hardware</option>
-          </select>
-        </div>
-        <div id="sampleRateNote" style="font-size:9px;color:var(--text-muted);margin:-2px 0 4px"></div>
         <div class="monitor-row">
           <label for="monitorToggle">Monitor</label>
           <button class="eq-fx-toggle" id="monitorToggle" onclick="toggleMonitor()" title="Hear the same processed audio on a separate output"></button>
@@ -1408,6 +1399,12 @@
           <button class="eq-fx-toggle" id="screenshareHideToggle" onclick="toggleScreenshareHide()" title="Best effort: hides this app from Discord/Windows screen capture"></button>
         </div>
         <div style="font-size:10px;color:var(--text-muted);margin-top:4px">Best effort: blanks this app in Discord and Windows screen captures.</div>
+        <h3 style="margin-top:16px">Spotify</h3>
+        <div class="monitor-row">
+          <label for="spPlayInAppToggle">Play songs in Custom Mic</label>
+          <button class="eq-fx-toggle" id="spPlayInAppToggle" onclick="toggleSpPlayInApp()" title="Play songs picked in the Spotify pages here instead of in the Spotify app"></button>
+        </div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:4px">Songs you pick in the Spotify pages play here, straight into your mic, monitor, EQ and lyrics. No Spotify app or Premium needed. Turn off to control the Spotify app instead.</div>
       </div>
 
       <div class="mic-section" style="margin-top:12px">
@@ -1881,7 +1878,215 @@ function stSetIcon(id, playing) {
 
 // The player bar follows whichever source is live: the soundpad while it has
 // a song loaded, otherwise the Spotify app when it is playing or paused.
+// ── Spotify songs played in Custom Mic ──
+// With "Play songs in Custom Mic" on, picking a song in the Spotify pages
+// plays it here: the main process finds the song's audio and the soundpad
+// engine plays it, so the mic, monitor, EQ and lyrics all use it directly.
+let spPlayInApp = true;
+try { spPlayInApp = localStorage.getItem('sp-play-in-app') !== '0'; } catch {}
+const catalog = { tracks: [], order: [], pos: -1, index: -1, contextUri: '', shuffle: false, repeat: 'off', seq: 0, loading: false, fails: 0 };
+
+function catalogTrack() { return catalog.index >= 0 ? catalog.tracks[catalog.index] || null : null; }
+function catalogActive() {
+  const t = catalogTrack();
+  return !!t && soundpadState.path === 'catalog:' + t.uri && soundpadState.state !== 'stopped';
+}
+function catalogShowing() { return (catalog.loading && !!catalogTrack()) || catalogActive(); }
+function catalogFile(t) {
+  return { name: t.name || 'Unknown', artist: spArtists(t), path: 'catalog:' + t.uri, cover: spImg(t.album?.images, 640) || '', catalog: t };
+}
+
+function toggleSpPlayInApp() {
+  spPlayInApp = !spPlayInApp;
+  try { localStorage.setItem('sp-play-in-app', spPlayInApp ? '1' : '0'); } catch {}
+  document.getElementById('spPlayInAppToggle')?.classList.toggle('on', spPlayInApp);
+  showToast(spPlayInApp ? 'Spotify songs now play in Custom Mic.' : 'Spotify songs now play in the Spotify app.', '');
+}
+
+function catalogBuildOrder(startIndex) {
+  const idx = catalog.tracks.map((_, i) => i);
+  if (catalog.shuffle) {
+    const rest = idx.filter(i => i !== startIndex);
+    for (let i = rest.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [rest[i], rest[j]] = [rest[j], rest[i]]; }
+    catalog.order = [startIndex, ...rest];
+  } else {
+    catalog.order = idx;
+  }
+  catalog.pos = Math.max(0, catalog.order.indexOf(startIndex));
+}
+
+function catalogStart(tracks, index, contextUri) {
+  const wanted = (tracks || [])[index]?.uri;
+  catalog.tracks = (tracks || []).filter(t => t && t.uri && /^spotify:track:/.test(t.uri) && !t.is_local);
+  if (!catalog.tracks.length) { showToast('Nothing playable here.', ''); return; }
+  let i = catalog.tracks.findIndex(t => t.uri === wanted);
+  if (i < 0) i = catalog.shuffle ? Math.floor(Math.random() * catalog.tracks.length) : 0;
+  catalog.contextUri = contextUri || '';
+  catalog.fails = 0;
+  catalogBuildOrder(i);
+  catalogPlayIndex(i);
+}
+
+async function catalogPlayContext(uri) {
+  if (!spWeb.connected) { showToast('Connect your Spotify account first.', ''); return; }
+  const [, kind, id] = String(uri).split(':');
+  const eid = encodeURIComponent(id || '');
+  let tracks = [];
+  try {
+    if (kind === 'track') {
+      tracks = [await spApi('GET', '/v1/tracks/' + eid)];
+    } else if (kind === 'album') {
+      const a = await spApi('GET', '/v1/albums/' + eid);
+      tracks = (a.tracks?.items || []).map(t => ({ ...t, album: { name: a.name, images: a.images } }));
+    } else if (kind === 'playlist') {
+      try {
+        tracks = (await spAll('/v1/playlists/' + eid + '/tracks?limit=100', 500)).map(i => i.track);
+      } catch {
+        tracks = (await window.api.spotifyWebPlaylistEmbed(id).catch(() => null))?.tracks || [];
+      }
+    } else if (kind === 'artist') {
+      const market = spWeb.profile?.country || 'US';
+      tracks = (await spApi('GET', '/v1/artists/' + eid + '/top-tracks?market=' + encodeURIComponent(market)))?.tracks || [];
+    } else if (kind === 'user' || kind === 'collection') {
+      tracks = (await spAll('/v1/me/tracks?limit=50', 500)).map(i => i.track);
+    }
+  } catch (e) {
+    showToast('Could not load songs: ' + e.message, 'error');
+    return;
+  }
+  catalogStart(tracks, catalog.shuffle ? Math.floor(Math.random() * Math.max(1, tracks.length)) : 0, uri);
+}
+
+function catalogQuery(t) {
+  return { id: t.id || String(t.uri).split(':')[2], title: t.name, artists: (t.artists || []).map(a => a.name).filter(Boolean), durationMs: t.duration_ms || 0 };
+}
+
+function catalogPauseSpotify() {
+  const s = spotifyState;
+  if (!s?.available || s.status !== 'Playing') return;
+  if (spWeb.connected && spWeb.player?.device) spApi('PUT', '/v1/me/player/pause').catch(() => {});
+  else window.api?.spotifyCommand?.('toggle')?.catch?.(() => {});
+  spotifyState = { ...s, status: 'Paused' };
+}
+
+async function catalogPlayIndex(i, { auto = false } = {}) {
+  const t = catalog.tracks[i];
+  if (!t) return;
+  const seq = ++catalog.seq;
+  catalog.index = i;
+  catalog.loading = true;
+  catalogPauseSpotify();
+  catalogRefreshUi();
+  let r;
+  try { r = await window.api.catalogResolve(catalogQuery(t)); } catch (e) { r = { error: /No handler/i.test(e.message) ? 'Restart Custom Mic to play Spotify songs here.' : e.message }; }
+  if (seq !== catalog.seq) return;
+  catalog.loading = false;
+  if (!r || r.error || !(r.path || r.streamUrl)) {
+    showToast('Could not play "' + t.name + '": ' + (r?.error || 'not found'), 'error');
+    catalogRefreshUi();
+    if (++catalog.fails < 3 && catalog.pos + 1 < catalog.order.length) catalogNext(true);
+    return;
+  }
+  catalog.fails = 0;
+  const file = catalogFile(t);
+  file.resolvedSrc = r.path || r.streamUrl;
+  await soundpadPlayFile(file);
+  if (seq !== catalog.seq) return;
+  catalogRefreshUi();
+  catalogPrefetch();
+}
+
+// Look up the next song early so it starts without a wait.
+function catalogPrefetch() {
+  const t = catalog.tracks[catalog.order[catalog.pos + 1]];
+  if (t) window.api?.catalogResolve?.(catalogQuery(t)).catch(() => {});
+}
+
+function catalogNext(auto) {
+  if (auto && catalog.repeat === 'track' && currentAudio) {
+    currentAudio.currentTime = 0;
+    currentAudio.play().catch(() => {});
+    return;
+  }
+  let pos = catalog.pos + 1;
+  if (pos >= catalog.order.length) {
+    if (catalog.repeat === 'context' || !auto) pos = 0;
+    else { soundpadStop(); catalogRefreshUi(); return; }
+  }
+  catalog.pos = pos;
+  catalogPlayIndex(catalog.order[pos], { auto });
+}
+
+function catalogPrev() {
+  if (currentAudio && currentAudio.currentTime > 3) { currentAudio.currentTime = 0; catalogRefreshUi(); return; }
+  catalog.pos = Math.max(0, catalog.pos - 1);
+  catalogPlayIndex(catalog.order[catalog.pos]);
+}
+
+function catalogHandlesCommand(cmd, arg) {
+  if (cmd === 'toggle') { if (!catalog.loading) soundpadToggleTransport(); }
+  else if (cmd === 'next') catalogNext(false);
+  else if (cmd === 'prev') catalogPrev();
+  else if (cmd === 'seek') { if (currentAudio) currentAudio.currentTime = Math.max(0, Number(arg) || 0) / 1000; }
+  else if (cmd === 'shuffle') { catalog.shuffle = !!arg; if (catalog.index >= 0) catalogBuildOrder(catalog.index); }
+  else if (cmd === 'repeat') catalog.repeat = { off: 'context', context: 'track', track: 'off' }[catalog.repeat] || 'off';
+  else return false;
+  catalogRefreshUi();
+  return true;
+}
+
+function catalogRefreshUi() {
+  try { spRenderNow(); } catch {}
+  try { spMarkPlaying(); } catch {}
+}
+
+function catalogRenderQueue() {
+  const el = document.getElementById('spQueue');
+  if (!el) return;
+  const key = [catalog.seq, catalog.pos, catalog.order.length, catalog.shuffle].join(':');
+  if (el.dataset.catalogKey === key) return;
+  el.dataset.catalogKey = key;
+  const next = catalog.order.slice(catalog.pos + 1, catalog.pos + 21).map(i => catalog.tracks[i]).filter(Boolean);
+  el.innerHTML = next.length ? '<h2 class="sp-h2">Next up</h2>' + spTrackList('queue', next, { showAlbum: false }) : '';
+  spMarkPlaying();
+}
+
+function catalogRenderNow() {
+  const t = catalogTrack();
+  const setText = (id, v) => { const e = document.getElementById(id); if (e && e.textContent !== v) e.textContent = v; };
+  setText('spNowTitle', t.name || 'Unknown');
+  setText('spNowSub', [spArtists(t), t.album?.name].filter(Boolean).join(' · '));
+  setText('spNowDevice', catalog.loading ? 'Finding song…' : 'Playing in Custom Mic');
+  const cover = spImg(t.album?.images, 640) || '';
+  ['spNowArt', 'spNowBg'].forEach(id => {
+    const img = document.getElementById(id);
+    if (!img) return;
+    if (cover) { if (img.getAttribute('src') !== cover) img.setAttribute('src', cover); img.hidden = false; }
+    else img.hidden = true;
+  });
+  stSetIcon('spNowPlay', soundpadState.state === 'playing' && !catalog.loading);
+  document.getElementById('spNowShuffle')?.classList.toggle('on', catalog.shuffle);
+  const repeat = document.getElementById('spNowRepeat');
+  if (repeat) {
+    repeat.classList.toggle('on', catalog.repeat !== 'off');
+    repeat.classList.toggle('one', catalog.repeat === 'track');
+    repeat.disabled = false;
+  }
+  const vol = document.getElementById('spNowVol');
+  const main = document.getElementById('eqVolumeSlider');
+  if (vol && main) {
+    vol.disabled = false;
+    if (document.activeElement !== vol) vol.value = Math.round(Number(main.value) / 2);
+    vol.style.setProperty('--pct', Number(vol.value) + '%');
+  }
+  spTickNow();
+  if (studioView === 'sp-now') catalogRenderQueue();
+}
+
+setTimeout(() => document.getElementById('spPlayInAppToggle')?.classList.toggle('on', spPlayInApp), 0);
+
 function studioSource() {
+  if (catalog.loading) return 'soundpad';
   const soundpadActive = !!soundpadState.path && soundpadState.state !== 'stopped';
   if (soundpadActive) return 'soundpad';
   const s = spotifyState;
@@ -1896,10 +2101,21 @@ function studioCurrentTrack() {
     return { title: s.title || '', artist: s.artist || '', durationMs: Number(s.endMs) || 0, position: spotifyPositionMs(), cover: spotifyCover || '', source: 'spotify' };
   }
   if (!soundpadState.path || soundpadState.state === 'stopped') return null;
-  const f = soundpadGetFiles().find(x => x.path === soundpadState.path);
+  const f = soundpadCurrentFile();
   if (!f) return null;
-  return { title: f.name, artist: f.artist || '', durationMs: soundpadState.durationMs || 0, position: soundpadCurrentOffsetMs(), cover: f.cover ? coverUrl(f.cover) : '', source: 'soundpad' };
+  return { title: f.name, artist: f.catalog ? (f.catalog.artists?.[0]?.name || '') : (f.artist || ''), durationMs: soundpadState.durationMs || 0, position: soundpadCurrentOffsetMs(), cover: soundpadCoverSrc(f), source: 'soundpad' };
 }
+function soundpadCurrentFile() {
+  if (!soundpadState.path) return null;
+  const t = catalogTrack();
+  if (t && soundpadState.path === 'catalog:' + t.uri) return catalogFile(t);
+  return soundpadGetFiles().find(f => f.path === soundpadState.path) || null;
+}
+function soundpadCoverSrc(f) {
+  if (!f?.cover) return '';
+  return /^https?:/i.test(f.cover) ? f.cover : coverUrl(f.cover);
+}
+
 function studioToggleLyrics() {
   if (studioView === 'lyrics') setStudioView(lyricsState.back || 'soundpad');
   else { lyricsState.back = studioView; setStudioView('lyrics'); studioLyricsTick(true); }
@@ -2091,10 +2307,11 @@ function studioTick() {
       if (icon) icon.style.display = '';
     }
   } else {
-    const file = active ? files.find(f => f.path === soundpadState.path) : null;
+    const loadingTrack = catalog.loading ? catalogTrack() : null;
+    const file = loadingTrack ? catalogFile(loadingTrack) : (active ? soundpadCurrentFile() : null);
     stSetText('stNowTitle', file ? file.name : 'Nothing playing');
     stSetText('stNowSub', file
-      ? [soundpadState.state === 'paused' ? 'Paused' : '', file.artist || ''].filter(Boolean).join(' · ')
+      ? (loadingTrack ? 'Loading…' : [soundpadState.state === 'paused' ? 'Paused' : '', file.artist || ''].filter(Boolean).join(' · '))
       : (files.length ? 'Pick a song, or press shuffle' : 'Add songs to get started'));
     stSetIcon('stPlay', playing);
     document.getElementById('stShuffle')?.classList.toggle('on', soundpadShuffle);
@@ -2107,7 +2324,7 @@ function studioTick() {
       stSetText('stTimeNow', soundpadFmt(position));
     }
     stSetText('stTimeTotal', soundpadFmt(duration));
-    const songArt = file && file.cover ? coverUrl(file.cover) : '';
+    const songArt = soundpadCoverSrc(file);
     if (cover && songArt) {
       if (cover.getAttribute('src') !== songArt) cover.setAttribute('src', songArt);
       cover.hidden = false;
@@ -2146,7 +2363,7 @@ function studioTick() {
     (soundpadShuffle ? ' · shuffle on' : ''));
 
   renderStudioLibrary(false);
-  if (studioView === 'sp-now' && typeof spTickNow === 'function') spTickNow();
+  if (studioView === 'sp-now') { if (catalogShowing()) spRenderNow(); else if (typeof spTickNow === 'function') spTickNow(); }
 }
 
 function startStudioTick() {
@@ -2178,6 +2395,7 @@ function studioPlayerPlay() {
 }
 
 function studioNext() {
+  if (catalogShowing()) { catalogNext(false); return; }
   if (studioSource() === 'spotify') { spotifyCommand('next'); return; }
   if (soundpadQueue.length) { playNextFromQueue(); return; }
   soundpadPlayRandom();
@@ -2187,6 +2405,7 @@ function studioNext() {
 // at the start it goes back to the song played before. Spotify applies the
 // same rule itself.
 function studioPrev() {
+  if (catalogShowing()) { catalogPrev(); return; }
   if (studioSource() === 'spotify') { spotifyCommand('prev'); return; }
   if (currentAudio && currentAudio.currentTime > 3) {
     currentAudio.currentTime = 0;
@@ -2210,6 +2429,7 @@ function studioSkip10() {
 }
 
 function studioShuffle() {
+  if (catalogShowing()) { catalogHandlesCommand('shuffle', !catalog.shuffle); return; }
   if (studioSource() === 'spotify') { spotifyCommand('shuffle', !spotifyState.shuffle); return; }
   soundpadShuffleClick();
 }
@@ -2297,6 +2517,7 @@ function onSpotifyState(state) {
 }
 
 function spotifyCommand(cmd, arg) {
+  if (catalogShowing() && catalogHandlesCommand(cmd, arg)) return;
   if (spWebHandlesCommand(cmd, arg)) return;
   if (cmd === 'repeat') return;   // web API only
   if (!window.api?.spotifyCommand || !spotifyState?.available) return;
@@ -3030,6 +3251,12 @@ function spWebHandlesCommand(cmd, arg) {
 }
 
 function spSetVolume(value) {
+  if (catalogShowing()) {
+    const main = document.getElementById('eqVolumeSlider');
+    if (main) { main.value = Math.round(Number(value) * 2); main.dispatchEvent(new Event('input', { bubbles: true })); }
+    document.getElementById('spNowVol')?.style.setProperty('--pct', Number(value) + '%');
+    return;
+  }
   const pct = Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
   if (spWeb.player?.device) spWeb.player.device.volume_percent = pct;
   spWeb.volumeHoldUntil = Date.now() + 2500;
@@ -3065,6 +3292,7 @@ async function spPlay(body) {
 
 function spPlayUri(uri) {
   if (!uri) return;
+  if (spPlayInApp) { catalogPlayContext(uri); return; }
   if (/^spotify:(track|episode):/.test(uri)) spPlay({ uris: [uri] });
   else spPlay({ context_uri: uri });
 }
@@ -3073,6 +3301,14 @@ function spPlayFromList(listId, index) {
   const list = spLists.get(listId);
   const track = list?.tracks[index];
   if (!track) return;
+  if (spPlayInApp) {
+    if (listId === 'queue' && catalog.tracks.length) {
+      const i = catalog.tracks.findIndex(t => t.uri === track.uri);
+      if (i >= 0) { catalog.pos = catalog.order.indexOf(i); catalogPlayIndex(i); return; }
+    }
+    catalogStart(list.tracks, index, list.contextUri);
+    return;
+  }
   if (list.contextUri) {
     spPlay({ context_uri: list.contextUri, offset: { uri: track.uri } });
   } else {
@@ -3117,7 +3353,7 @@ function spTrackList(listId, tracks, { contextUri = '', showAlbum = true, showAr
 }
 
 function spMarkPlaying() {
-  const uri = spotifyState?.source === 'web' ? spotifyState.uri : '';
+  const uri = catalogShowing() ? (catalogTrack()?.uri || '') : (spotifyState?.source === 'web' ? spotifyState.uri : '');
   document.querySelectorAll('#studioShell .sp-track[data-uri]').forEach(r =>
     r.classList.toggle('playing', !!uri && r.dataset.uri === uri));
 }
@@ -3368,6 +3604,7 @@ async function spOpen(target) {
 
 function spRenderNow() {
   if (!document.getElementById('spNowRoot')) return;
+  if (catalogShowing()) { catalogRenderNow(); return; }
   const s = spotifyState;
   const live = !!s?.available;
   const setText = (id, v) => { const e = document.getElementById(id); if (e && e.textContent !== v) e.textContent = v; };
@@ -3408,9 +3645,10 @@ function spRenderNow() {
 
 function spTickNow() {
   const s = spotifyState;
-  const live = !!s?.available;
-  const pos = live ? spotifyPositionMs() : 0;
-  const dur = live ? Number(s.endMs) || 0 : 0;
+  const inApp = catalogShowing();
+  const live = inApp || !!s?.available;
+  const pos = inApp ? (catalog.loading ? 0 : soundpadCurrentOffsetMs()) : (live ? spotifyPositionMs() : 0);
+  const dur = inApp ? (soundpadState.durationMs || catalogTrack()?.duration_ms || 0) : (live ? Number(s.endMs) || 0 : 0);
   const seek = document.getElementById('spNowSeek');
   if (seek && document.activeElement !== seek) {
     const v = dur ? Math.round((pos / dur) * 1000) : 0;
@@ -3424,13 +3662,14 @@ function spTickNow() {
 }
 
 function spNowSeekCommit(value) {
-  const end = Number(spotifyState?.endMs) || 0;
+  const end = catalogShowing() ? (soundpadState.durationMs || catalogTrack()?.duration_ms || 0) : (Number(spotifyState?.endMs) || 0);
   if (end) spotifyCommand('seek', (Number(value) / 1000) * end);
 }
 
 async function spLoadQueue() {
   const el = document.getElementById('spQueue');
   if (!el) return;
+  el.dataset.catalogKey = '';
   if (!spWeb.connected) { el.innerHTML = ''; return; }
   const key = spotifyState?.uri || '';
   if (Date.now() - spQueueAt < 8000 && spQueueKey === key) return;
@@ -3438,6 +3677,7 @@ async function spLoadQueue() {
   spQueueKey = key;
   try {
     const q = await spApi('GET', '/v1/me/player/queue');
+    if (catalogShowing()) return;  // a song started in Custom Mic owns this list now
     const next = (q?.queue || []).filter(t => t && t.type === 'track').slice(0, 10);
     el.innerHTML = next.length ? '<h2 class="sp-h2">Next up</h2>' + spTrackList('queue', next, { showAlbum: false }) : '';
     spMarkPlaying();
@@ -5880,8 +6120,8 @@ async function soundpadPlayFile(file) {
     soundpadStopCurrent();
   }
 
-  let audioSrc = file.path;
-  const sourceUrl = file.sourceUrl || (/^https?:\/\//i.test(file.path) ? file.path : '');
+  let audioSrc = file.resolvedSrc || file.path;
+  const sourceUrl = file.resolvedSrc ? '' : (file.sourceUrl || (/^https?:\/\//i.test(file.path) ? file.path : ''));
   if (sourceUrl) {
     // Play the downloaded copy; streaming is only a fallback if that fails.
     const localPath = await soundpadEnsureLocalCopy(file, sourceUrl);
@@ -5923,7 +6163,7 @@ async function soundpadPlayFile(file) {
   try {
     await audio.play();
     soundpadState = { path: file.path, state: 'playing', offsetMs: 0, durationMs: (audio.duration || 0) * 1000, startedAt: Date.now() };
-    soundpadShuffleHistory = [file.path, ...soundpadShuffleHistory.filter(p => p !== file.path)].slice(0, 50);
+    if (!file.catalog) soundpadShuffleHistory = [file.path, ...soundpadShuffleHistory.filter(p => p !== file.path)].slice(0, 50);
     soundpadRender();
     soundpadUpdateNowbar();
     updateTopTransport();
@@ -6030,6 +6270,7 @@ function renderQueue() {
 }
 
 function playNextFromQueue() {
+  if (catalogActive()) { catalogNext(true); return; }
   if (soundpadQueue.length > 0) {
     const next = soundpadQueue.shift();
     renderQueue();
@@ -6078,7 +6319,7 @@ function soundpadUpdateNowbar(previewMs) {
   if (!active) { seek.value = 0; time.textContent = '0:00 / 0:00'; title.textContent = 'No audio playing'; updateTopTransport(); return; }
   const duration = soundpadState.durationMs || 0;
   const offset = previewMs ?? soundpadCurrentOffsetMs();
-  const name = soundpadGetFiles().find(f => f.path === soundpadState.path)?.name || 'Unknown';
+  const name = soundpadCurrentFile()?.name || 'Unknown';
   title.textContent = `${soundpadState.state === 'paused' ? 'Paused: ' : 'Playing: '}${name}`;
   time.textContent = `${soundpadFmt(offset)} / ${soundpadFmt(duration)}`;
   seek.disabled = !duration;
