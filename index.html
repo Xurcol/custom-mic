@@ -267,14 +267,30 @@
     .st-lib-sep{height:1px;background:#282828;margin:8px 12px}
     .st-main{overflow-y:auto;min-width:0;position:relative;scrollbar-width:thin;scrollbar-color:#3a3a3a transparent}
     .st-view{display:none;padding:0 24px 40px}
-    .st-lyrics{padding:40px 8px 50vh;max-width:900px}
-    .st-lyrics-line{font-size:clamp(22px,2.6vw,34px);font-weight:800;line-height:1.35;color:rgba(255,255,255,.35);margin:0 0 14px;cursor:pointer;transition:color .2s}
-    .st-lyrics-line:hover{color:rgba(255,255,255,.7)}
-    .st-lyrics-line.past{color:rgba(255,255,255,.6)}
-    .st-lyrics-line.now{color:#fff}
-    .st-lyrics.plain .st-lyrics-line{color:#fff;cursor:default}
-    .st-lyrics-msg{color:#b3b3b3;font-size:16px;padding:20px 0}
-    .st-lyrics-src{color:#6a6a6a;font-size:11px;margin-top:30px}
+    .st-view[data-view="lyrics"]{position:relative;isolation:isolate;min-height:100%;padding:0 48px}
+    .ly-bg{position:sticky;top:0;height:0;z-index:-1;pointer-events:none}
+    .ly-bg img{position:absolute;left:-60px;right:-60px;top:0;width:calc(100% + 120px);height:calc(100vh - 150px);object-fit:cover;filter:blur(90px) saturate(1.6) brightness(.45);transform:scale(1.4);transition:opacity .8s}
+    .ly-bg img[hidden]{display:block;opacity:0}
+    .ly-bg::after{content:'';position:absolute;left:-60px;right:-60px;top:0;height:calc(100vh - 150px);background:radial-gradient(120% 90% at 30% 20%,transparent 0%,rgba(18,18,18,.55) 70%,rgba(18,18,18,.85) 100%)}
+    .ly-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:14px;padding:26px 0 18px;background:linear-gradient(180deg,rgba(18,18,18,.55),transparent);backdrop-filter:blur(2px)}
+    .ly-head img{width:52px;height:52px;border-radius:8px;object-fit:cover;box-shadow:0 8px 24px rgba(0,0,0,.45)}
+    .ly-head img[hidden]{display:none}
+    .ly-head-title{font-size:17px;font-weight:700;color:#fff;letter-spacing:-.01em}
+    .ly-head-artist{font-size:13px;color:rgba(255,255,255,.65);margin-top:2px}
+    .st-lyrics{padding:12vh 0 55vh;max-width:980px}
+    .st-lyrics-line{font-size:clamp(28px,3.1vw,44px);font-weight:800;line-height:1.28;letter-spacing:-.02em;margin:0 0 22px;cursor:pointer;color:rgba(255,255,255,.28);filter:blur(1.2px);transform-origin:left center;transform:scale(.97);transition:filter .5s ease,transform .5s cubic-bezier(.22,1,.36,1),color .5s ease,opacity .5s}
+    .st-lyrics-line:hover{filter:none;color:rgba(255,255,255,.55)}
+    .st-lyrics-line.past{color:rgba(255,255,255,.42)}
+    .st-lyrics-line.near{filter:blur(.4px)}
+    .st-lyrics-line.now{filter:none;transform:scale(1);color:rgba(255,255,255,.3)}
+    .ly-w{display:inline;white-space:pre-wrap;transition:text-shadow .35s ease}
+    .st-lyrics-line.now .ly-w{background:linear-gradient(90deg,#fff calc(var(--p,0) * 1%),rgba(255,255,255,.32) calc(var(--p,0) * 1% + 8%));-webkit-background-clip:text;background-clip:text;color:transparent}
+    .st-lyrics-line.now .ly-w.lit{text-shadow:0 0 18px rgba(255,255,255,.45),0 0 42px rgba(255,255,255,.18)}
+    .st-lyrics-line.past .ly-w{color:rgba(255,255,255,.42)}
+    .st-lyrics-line.gap{font-size:28px;letter-spacing:.3em}
+    .st-lyrics.plain .st-lyrics-line{color:rgba(255,255,255,.9);filter:none;transform:none;cursor:default;font-size:clamp(22px,2.4vw,32px)}
+    .st-lyrics-msg{color:rgba(255,255,255,.7);font-size:18px;padding:20px 0}
+    .st-lyrics-src{color:rgba(255,255,255,.35);font-size:11px;margin-top:40px}
     .st-view.active{display:block;animation:st-view-in .28s cubic-bezier(.22,1,.36,1)}
     @keyframes st-view-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
     .st-title{font-size:32px;font-weight:800;letter-spacing:-.02em;padding:28px 0 18px;color:#fff}
@@ -888,6 +904,11 @@
       <div class="sp-mixer-host"></div>
     </section>
     <section class="st-view" data-view="lyrics">
+      <div class="ly-bg" aria-hidden="true"><img id="lyBg" alt="" hidden></div>
+      <div class="ly-head">
+        <img id="lyCover" alt="" hidden>
+        <div class="ly-head-text"><div class="ly-head-title" id="lyTitle"></div><div class="ly-head-artist" id="lyArtist"></div></div>
+      </div>
       <div class="st-lyrics" id="stLyrics"><div class="st-lyrics-msg">Play a song to see its lyrics.</div></div>
     </section>
     <section class="st-view" data-view="themes"><h1 class="st-title">Settings &amp; Themes</h1><div class="st-slot" data-slot="themes"></div></section>
@@ -1855,70 +1876,152 @@ function studioSource() {
   return 'soundpad';
 }
 
-let lyricsState = { key: '', lines: [], synced: false, nowIdx: -1, seq: 0 };
+let lyricsState = { key: '', lines: [], synced: false, nowIdx: -1, seq: 0, raf: 0 };
 function studioCurrentTrack() {
   if (studioSource() === 'spotify') {
     const s = spotifyState || {};
-    return { title: s.title || '', artist: s.artist || '', durationMs: Number(s.endMs) || 0, position: spotifyPositionMs(), source: 'spotify' };
+    return { title: s.title || '', artist: s.artist || '', durationMs: Number(s.endMs) || 0, position: spotifyPositionMs(), cover: spotifyCover || '', source: 'spotify' };
   }
   if (!soundpadState.path || soundpadState.state === 'stopped') return null;
   const f = soundpadGetFiles().find(x => x.path === soundpadState.path);
   if (!f) return null;
-  return { title: f.name, artist: f.artist || '', durationMs: soundpadState.durationMs || 0, position: soundpadCurrentOffsetMs(), source: 'soundpad' };
+  return { title: f.name, artist: f.artist || '', durationMs: soundpadState.durationMs || 0, position: soundpadCurrentOffsetMs(), cover: f.cover ? coverUrl(f.cover) : '', source: 'soundpad' };
 }
 function studioToggleLyrics() {
   if (studioView === 'lyrics') setStudioView(lyricsState.back || 'soundpad');
   else { lyricsState.back = studioView; setStudioView('lyrics'); studioLyricsTick(true); }
 }
+
+// Parses LRC into lines of words with start/end times. Enhanced LRC word tags
+// (<mm:ss.xx>) are used when present; otherwise each line's time is spread
+// over its words by length, so the fill still moves word by word.
+function lyricsParse(synced, durationMs) {
+  const stamp = (m, sec) => (Number(m) * 60 + Number(sec)) * 1000;
+  const lines = [];
+  synced.split(/\r?\n/).forEach(raw => {
+    const m = raw.match(/^\[(\d+):(\d+(?:\.\d+)?)\](.*)$/);
+    if (!m) return;
+    const at = stamp(m[1], m[2]);
+    const body = m[3];
+    const words = [];
+    if (/<\d+:\d+(?:\.\d+)?>/.test(body)) {
+      const re = /<(\d+):(\d+(?:\.\d+)?)>([^<]*)/g;
+      let w;
+      while ((w = re.exec(body))) if (w[3].trim()) words.push({ text: w[3], at: stamp(w[1], w[2]) });
+    } else {
+      body.trim().split(/(\s+)/).forEach(t => { if (t.trim()) words.push({ text: t }); else if (words.length) words[words.length - 1].text += t; });
+    }
+    lines.push({ at, words, text: body.replace(/<[^>]+>/g, '').trim() });
+  });
+  lines.sort((a, b) => a.at - b.at);
+  lines.forEach((line, i) => {
+    const next = lines[i + 1] ? lines[i + 1].at : (durationMs || line.at + 6000);
+    // Singing rarely fills the whole gap to the next line; cap it.
+    const end = Math.min(next, line.at + Math.max(1200, line.words.length * 650 + 900));
+    line.end = end;
+    if (!line.words.length) return;
+    if (line.words.every(w => w.at === undefined)) {
+      const weights = line.words.map(w => Math.max(2, w.text.trim().length) + 1.5);
+      const total = weights.reduce((a, b) => a + b, 0);
+      let t = line.at;
+      line.words.forEach((w, j) => { w.at = t; t += (end - line.at) * (weights[j] / total); w.end = t; });
+    } else {
+      line.words.forEach((w, j) => { w.end = j + 1 < line.words.length ? line.words[j + 1].at : end; });
+    }
+  });
+  return lines;
+}
+
 async function studioLyricsTick(force) {
   document.getElementById('stLyricsBtn')?.classList.toggle('on', studioView === 'lyrics');
-  if (studioView !== 'lyrics') return;
+  if (studioView !== 'lyrics') { if (lyricsState.raf) { cancelAnimationFrame(lyricsState.raf); lyricsState.raf = 0; } return; }
   const el = document.getElementById('stLyrics');
   if (!el) return;
   const t = studioCurrentTrack();
+
+  const setImg = (id, src) => { const i = document.getElementById(id); if (!i) return; if (src) { if (i.getAttribute('src') !== src) i.setAttribute('src', src); i.hidden = false; } else i.hidden = true; };
+  setImg('lyBg', t?.cover || '');
+  setImg('lyCover', t?.cover || '');
+  const setText = (id, v) => { const e = document.getElementById(id); if (e && e.textContent !== v) e.textContent = v; };
+  setText('lyTitle', t ? t.title : '');
+  setText('lyArtist', t ? t.artist : '');
+
   const key = t ? t.title + '|' + t.artist : '';
-  if (key !== lyricsState.key || force === true && !lyricsState.lines.length && !lyricsState.loading) {
-    lyricsState = { ...lyricsState, key, lines: [], synced: false, nowIdx: -1, loading: !!t };
-    if (!t) { el.className = 'st-lyrics'; el.innerHTML = '<div class="st-lyrics-msg">Play a song to see its lyrics.</div>'; return; }
+  if (key !== lyricsState.key || (force === true && !lyricsState.lines.length && !lyricsState.loading)) {
+    lyricsState = { ...lyricsState, key, lines: [], synced: false, nowIdx: -2, loading: !!t };
     el.className = 'st-lyrics';
+    if (!t) { el.innerHTML = '<div class="st-lyrics-msg">Play a song to see its lyrics.</div>'; return; }
     el.innerHTML = '<div class="st-lyrics-msg">Loading lyrics…</div>';
     const seq = ++lyricsState.seq;
     let r;
-    try { r = await window.api.lyricsGet({ title: t.title, artist: t.artist, durationMs: t.durationMs }); } catch (e) { r = { error: 'Lyrics need a restart of Custom Mic to work.' }; }
+    try { r = await window.api.lyricsGet({ title: t.title, artist: t.artist, durationMs: t.durationMs }); } catch { r = { error: 'Lyrics need a restart of Custom Mic to work.' }; }
     if (seq !== lyricsState.seq) return;
     lyricsState.loading = false;
-    if (r.error || r.instrumental && !r.synced && !r.plain) {
+    if (r.error || (r.instrumental && !r.synced && !r.plain)) {
       el.innerHTML = '<div class="st-lyrics-msg">' + esc(r.error || 'Instrumental — no lyrics.') + '</div>';
       return;
     }
     if (r.synced) {
       lyricsState.synced = true;
-      lyricsState.lines = r.synced.split(/\r?\n/).map(l => {
-        const m = l.match(/^\[(\d+):(\d+(?:\.\d+)?)\]\s*(.*)$/);
-        return m ? { at: (Number(m[1]) * 60 + Number(m[2])) * 1000, text: m[3] } : null;
-      }).filter(Boolean);
+      lyricsState.lines = lyricsParse(r.synced, t.durationMs);
+      el.innerHTML = lyricsState.lines.map((l, i) => l.words.length
+        ? '<div class="st-lyrics-line" data-i="' + i + '">' + l.words.map(w => '<span class="ly-w">' + esc(w.text) + '</span>').join('') + '</div>'
+        : '<div class="st-lyrics-line gap" data-i="' + i + '">&#8226; &#8226; &#8226;</div>').join('') +
+        '<div class="st-lyrics-src">Lyrics from LRCLIB</div>';
+      lyricsState.lineEls = [...el.querySelectorAll('.st-lyrics-line')];
+      lyricsState.wordEls = lyricsState.lineEls.map(n => [...n.querySelectorAll('.ly-w')]);
+      lyricsState.lineEls.forEach(n => n.onclick = () => {
+        const l = lyricsState.lines[Number(n.dataset.i)];
+        const cur = studioCurrentTrack();
+        if (l && cur?.durationMs) studioSeekCommit(Math.round((l.at / cur.durationMs) * 1000));
+      });
     } else {
-      lyricsState.lines = r.plain.split(/\r?\n/).map(text => ({ at: -1, text }));
+      el.className = 'st-lyrics plain';
+      el.innerHTML = r.plain.split(/\r?\n/).map(text => '<div class="st-lyrics-line">' + (esc(text) || '&nbsp;') + '</div>').join('') +
+        '<div class="st-lyrics-src">Lyrics from LRCLIB</div>';
     }
-    el.className = 'st-lyrics' + (lyricsState.synced ? '' : ' plain');
-    el.innerHTML = lyricsState.lines.map((l, i) => '<div class="st-lyrics-line" data-i="' + i + '">' + (esc(l.text) || '&#9834;') + '</div>').join('') +
-      '<div class="st-lyrics-src">Lyrics from LRCLIB</div>';
-    el.querySelectorAll('.st-lyrics-line').forEach(n => n.onclick = () => {
-      const l = lyricsState.lines[Number(n.dataset.i)];
-      if (!lyricsState.synced || !l) return;
-      const cur = studioCurrentTrack();
-      if (cur?.durationMs) studioSeekCommit(Math.round((l.at / cur.durationMs) * 1000));
-    });
   }
-  if (!lyricsState.synced || !t) return;
-  const pos = t.position + 250;
-  let idx = -1;
-  for (let i = 0; i < lyricsState.lines.length && lyricsState.lines[i].at <= pos; i++) idx = i;
-  if (idx === lyricsState.nowIdx) return;
-  lyricsState.nowIdx = idx;
-  el.querySelectorAll('.st-lyrics-line').forEach((n, i) => { n.classList.toggle('now', i === idx); n.classList.toggle('past', i < idx); });
-  const cur = el.querySelector('.st-lyrics-line.now');
-  if (cur) cur.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  if (lyricsState.synced && !lyricsState.raf) lyricsState.raf = requestAnimationFrame(lyricsFrame);
+}
+
+// Runs every frame while the lyrics page is open: picks the current line,
+// then fills each of its words smoothly from left to right.
+function lyricsFrame() {
+  lyricsState.raf = 0;
+  if (studioView !== 'lyrics' || !lyricsState.synced || !lyricsState.lineEls) return;
+  const t = studioCurrentTrack();
+  if (t) {
+    const pos = t.position + 120;
+    const lines = lyricsState.lines;
+    let idx = -1;
+    for (let i = 0; i < lines.length && lines[i].at <= pos; i++) idx = i;
+    if (idx !== lyricsState.nowIdx) {
+      const prev = lyricsState.nowIdx;
+      lyricsState.nowIdx = idx;
+      lyricsState.lineEls.forEach((n, i) => {
+        n.classList.toggle('now', i === idx);
+        n.classList.toggle('past', i < idx);
+        n.classList.toggle('near', Math.abs(i - idx) === 1);
+      });
+      if (prev >= 0) lyricsState.wordEls[prev]?.forEach(w => { w.style.removeProperty('--p'); w.classList.remove('lit'); });
+      const cur = lyricsState.lineEls[idx];
+      if (cur) cur.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+    const line = lines[idx];
+    const words = lyricsState.wordEls[idx];
+    if (line && words) {
+      line.words.forEach((w, j) => {
+        const span = Math.max(1, w.end - w.at);
+        const p = Math.max(0, Math.min(100, ((pos - w.at) / span) * 100));
+        const n = words[j];
+        if (!n) return;
+        const v = p.toFixed(1);
+        if (n.style.getPropertyValue('--p') !== v) n.style.setProperty('--p', v);
+        n.classList.toggle('lit', p > 0 && pos < w.end + 400);
+      });
+    }
+  }
+  lyricsState.raf = requestAnimationFrame(lyricsFrame);
 }
 
 function studioTick() {
