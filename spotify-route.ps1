@@ -5,7 +5,7 @@
 #   spotify-route.ps1 -List                 -> JSON list of output devices
 #   spotify-route.ps1 -Device "<id>"        -> route Spotify there
 #   spotify-route.ps1 -Device ""            -> back to the Windows default
-param([switch]$List, [string]$Device = $null)
+param([switch]$List, [switch]$Get, [string]$Device = $null)
 
 Add-Type -TypeDefinition @"
 using System;
@@ -34,7 +34,7 @@ namespace CMRoute {
   [Guid("ab3d4648-e242-459f-b02f-541c70306324"), InterfaceType(ComInterfaceType.InterfaceIsIInspectable)]
   interface IAudioPolicyConfigFactory {
     int m0(); int m1(); int m2(); int m3(); int m4(); int m5(); int m6(); int m7(); int m8(); int m9();
-    int m10(); int m11(); int m12(); int m13(); int m14(); int m15(); int m16(); int m17();
+    int m10(); int m11(); int m12(); int m13(); int m14(); int m15(); int m16(); int m17(); int m18();
     [PreserveSig] int SetPersistedDefaultAudioEndpoint(uint pid, int flow, int role, IntPtr deviceId);
     [PreserveSig] int GetPersistedDefaultAudioEndpoint(uint pid, int flow, int role, out IntPtr deviceId);
     [PreserveSig] int ClearAllPersistedApplicationDefaultEndpoints();
@@ -82,6 +82,25 @@ namespace CMRoute {
       } finally { WindowsDeleteString(h); }
     }
 
+    // Which device Windows has saved for each Spotify process ("" = default).
+    public static string GetJson() {
+      var f = Factory();
+      var parts = new List<string>();
+      foreach (var p in Process.GetProcessesByName("Spotify")) {
+        IntPtr h;
+        string dev = "";
+        if (f.GetPersistedDefaultAudioEndpoint((uint)p.Id, 0, 1, out h) == 0 && h != IntPtr.Zero) {
+          uint len; IntPtr raw = WindowsGetStringRawBuffer(h, out len);
+          dev = Marshal.PtrToStringUni(raw, (int)len);
+          WindowsDeleteString(h);
+        }
+        parts.Add("{\"pid\":" + p.Id + ",\"device\":\"" + Esc(dev) + "\"}");
+      }
+      return "[" + string.Join(",", parts) + "]";
+    }
+    [DllImport("combase.dll")]
+    static extern IntPtr WindowsGetStringRawBuffer(IntPtr h, out uint len);
+
     public static int Route(string mmdeviceId) {
       var f = Factory();
       IntPtr h = IntPtr.Zero;
@@ -92,9 +111,11 @@ namespace CMRoute {
       int count = 0;
       try {
         foreach (var p in Process.GetProcessesByName("Spotify")) {
-          f.SetPersistedDefaultAudioEndpoint((uint)p.Id, 0, 0, h);  // console
-          f.SetPersistedDefaultAudioEndpoint((uint)p.Id, 0, 1, h);  // multimedia
-          count++;
+          // Helper processes (crash handler, GPU) may refuse; only the ones
+          // that play audio matter, so a refusal is skipped, not fatal.
+          int a = f.SetPersistedDefaultAudioEndpoint((uint)p.Id, 0, 0, h);  // console
+          int b = f.SetPersistedDefaultAudioEndpoint((uint)p.Id, 0, 1, h);  // multimedia
+          if (a >= 0 && b >= 0) count++;
         }
       } finally { if (h != IntPtr.Zero) WindowsDeleteString(h); }
       return count;
@@ -104,4 +125,5 @@ namespace CMRoute {
 "@
 
 if ($List) { [CMRoute.Router]::ListJson(); exit 0 }
+if ($Get) { [CMRoute.Router]::GetJson(); exit 0 }
 if ($null -ne $Device) { $n = [CMRoute.Router]::Route($Device); "routed $n"; exit 0 }
