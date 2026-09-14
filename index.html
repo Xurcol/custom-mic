@@ -267,6 +267,14 @@
     .st-lib-sep{height:1px;background:#282828;margin:8px 12px}
     .st-main{overflow-y:auto;min-width:0;position:relative;scrollbar-width:thin;scrollbar-color:#3a3a3a transparent}
     .st-view{display:none;padding:0 24px 40px}
+    .st-lyrics{padding:40px 8px 50vh;max-width:900px}
+    .st-lyrics-line{font-size:clamp(22px,2.6vw,34px);font-weight:800;line-height:1.35;color:rgba(255,255,255,.35);margin:0 0 14px;cursor:pointer;transition:color .2s}
+    .st-lyrics-line:hover{color:rgba(255,255,255,.7)}
+    .st-lyrics-line.past{color:rgba(255,255,255,.6)}
+    .st-lyrics-line.now{color:#fff}
+    .st-lyrics.plain .st-lyrics-line{color:#fff;cursor:default}
+    .st-lyrics-msg{color:#b3b3b3;font-size:16px;padding:20px 0}
+    .st-lyrics-src{color:#6a6a6a;font-size:11px;margin-top:30px}
     .st-view.active{display:block;animation:st-view-in .28s cubic-bezier(.22,1,.36,1)}
     @keyframes st-view-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
     .st-title{font-size:32px;font-weight:800;letter-spacing:-.02em;padding:28px 0 18px;color:#fff}
@@ -842,6 +850,9 @@
       <div id="spQueue"></div>
       <div class="sp-mixer-host"></div>
     </section>
+    <section class="st-view" data-view="lyrics">
+      <div class="st-lyrics" id="stLyrics"><div class="st-lyrics-msg">Play a song to see its lyrics.</div></div>
+    </section>
     <section class="st-view" data-view="themes"><h1 class="st-title">Settings &amp; Themes</h1><div class="st-slot" data-slot="themes"></div></section>
   </main>
 
@@ -868,6 +879,7 @@
       </div>
     </div>
     <div class="st-right">
+      <button class="st-ctl" id="stLyricsBtn" onclick="studioToggleLyrics()" title="Lyrics"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h10M4 18h7"/><circle cx="18" cy="17" r="2.5"/><path d="M20.5 17V9"/></svg></button>
       <button class="st-mic" id="stMicBtn" onclick="toggleMic()" title="Start or stop the microphone"><span class="st-mic-dot"></span><span id="stMicLabel">Mic off</span></button>
       <div class="st-meter"><div id="stMicMeter"></div></div>
       <div class="st-vol"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg><input type="range" id="stVolume" min="0" max="200" value="100" oninput="studioSetVolume(this.value)" title="Music volume"></div>
@@ -1806,7 +1818,74 @@ function studioSource() {
   return 'soundpad';
 }
 
+let lyricsState = { key: '', lines: [], synced: false, nowIdx: -1, seq: 0 };
+function studioCurrentTrack() {
+  if (studioSource() === 'spotify') {
+    const s = spotifyState || {};
+    return { title: s.title || '', artist: s.artist || '', durationMs: Number(s.endMs) || 0, position: spotifyPositionMs(), source: 'spotify' };
+  }
+  if (!soundpadState.path || soundpadState.state === 'stopped') return null;
+  const f = soundpadGetFiles().find(x => x.path === soundpadState.path);
+  if (!f) return null;
+  return { title: f.name, artist: f.artist || '', durationMs: soundpadState.durationMs || 0, position: soundpadCurrentOffsetMs(), source: 'soundpad' };
+}
+function studioToggleLyrics() {
+  if (studioView === 'lyrics') setStudioView(lyricsState.back || 'soundpad');
+  else { lyricsState.back = studioView; setStudioView('lyrics'); studioLyricsTick(true); }
+}
+async function studioLyricsTick(force) {
+  document.getElementById('stLyricsBtn')?.classList.toggle('on', studioView === 'lyrics');
+  if (studioView !== 'lyrics') return;
+  const el = document.getElementById('stLyrics');
+  if (!el) return;
+  const t = studioCurrentTrack();
+  const key = t ? t.title + '|' + t.artist : '';
+  if (key !== lyricsState.key || force === true && !lyricsState.lines.length && !lyricsState.loading) {
+    lyricsState = { ...lyricsState, key, lines: [], synced: false, nowIdx: -1, loading: !!t };
+    if (!t) { el.className = 'st-lyrics'; el.innerHTML = '<div class="st-lyrics-msg">Play a song to see its lyrics.</div>'; return; }
+    el.className = 'st-lyrics';
+    el.innerHTML = '<div class="st-lyrics-msg">Loading lyrics…</div>';
+    const seq = ++lyricsState.seq;
+    let r;
+    try { r = await window.api.lyricsGet({ title: t.title, artist: t.artist, durationMs: t.durationMs }); } catch (e) { r = { error: 'Lyrics need a restart of Custom Mic to work.' }; }
+    if (seq !== lyricsState.seq) return;
+    lyricsState.loading = false;
+    if (r.error || r.instrumental && !r.synced && !r.plain) {
+      el.innerHTML = '<div class="st-lyrics-msg">' + esc(r.error || 'Instrumental — no lyrics.') + '</div>';
+      return;
+    }
+    if (r.synced) {
+      lyricsState.synced = true;
+      lyricsState.lines = r.synced.split(/\r?\n/).map(l => {
+        const m = l.match(/^\[(\d+):(\d+(?:\.\d+)?)\]\s*(.*)$/);
+        return m ? { at: (Number(m[1]) * 60 + Number(m[2])) * 1000, text: m[3] } : null;
+      }).filter(Boolean);
+    } else {
+      lyricsState.lines = r.plain.split(/\r?\n/).map(text => ({ at: -1, text }));
+    }
+    el.className = 'st-lyrics' + (lyricsState.synced ? '' : ' plain');
+    el.innerHTML = lyricsState.lines.map((l, i) => '<div class="st-lyrics-line" data-i="' + i + '">' + (esc(l.text) || '&#9834;') + '</div>').join('') +
+      '<div class="st-lyrics-src">Lyrics from LRCLIB</div>';
+    el.querySelectorAll('.st-lyrics-line').forEach(n => n.onclick = () => {
+      const l = lyricsState.lines[Number(n.dataset.i)];
+      if (!lyricsState.synced || !l) return;
+      const cur = studioCurrentTrack();
+      if (cur?.durationMs) studioSeekCommit(Math.round((l.at / cur.durationMs) * 1000));
+    });
+  }
+  if (!lyricsState.synced || !t) return;
+  const pos = t.position + 250;
+  let idx = -1;
+  for (let i = 0; i < lyricsState.lines.length && lyricsState.lines[i].at <= pos; i++) idx = i;
+  if (idx === lyricsState.nowIdx) return;
+  lyricsState.nowIdx = idx;
+  el.querySelectorAll('.st-lyrics-line').forEach((n, i) => { n.classList.toggle('now', i === idx); n.classList.toggle('past', i < idx); });
+  const cur = el.querySelector('.st-lyrics-line.now');
+  if (cur) cur.scrollIntoView({ block: 'center', behavior: 'smooth' });
+}
+
 function studioTick() {
+  studioLyricsTick();
   if (appLayout !== 'studio') return;
   const files = soundpadGetFiles();
   const active = !!soundpadState.path && soundpadState.state !== 'stopped';

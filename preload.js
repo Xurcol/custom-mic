@@ -48,6 +48,7 @@ contextBridge.exposeInMainWorld('api', {
   spotifyGet: () => ipcRenderer.invoke('spotify:get'),
   spotifyCommand: (cmd, arg) => ipcRenderer.invoke('spotify:command', cmd, arg),
   songCover: (song) => ipcRenderer.invoke('song-cover', song),
+  lyricsGet: (q) => ipcRenderer.invoke('lyrics:get', q),
   songArtist: (song) => ipcRenderer.invoke('song-artist', song),
   spotifyAudioStart: (sampleRate) => ipcRenderer.invoke('spotify-audio:start', sampleRate),
   spotifyAudioStop: () => ipcRenderer.invoke('spotify-audio:stop'),

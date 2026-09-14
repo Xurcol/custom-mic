@@ -1035,6 +1035,44 @@ async function resolveSongArtist({ path: filePath, sourceUrl } = {}) {
   });
 }
 
+// Lyrics come from LRCLIB (free, no key). Spotify's API has none.
+const lyricsCache = new Map();
+ipcMain.handle('lyrics:get', async (_e, q) => {
+  const title = String(q?.title || '').trim().slice(0, 200);
+  const artist = String(q?.artist || '').trim().slice(0, 200);
+  const duration = Math.round(Number(q?.durationMs || 0) / 1000);
+  if (!title) return { error: 'Nothing playing.' };
+  const key = JSON.stringify([title.toLowerCase(), artist.toLowerCase()]);
+  if (lyricsCache.has(key)) return lyricsCache.get(key);
+  const headers = { 'User-Agent': 'CustomMic (https://github.com/Xurcol/custom-mic)' };
+  const pick = r => r && (r.syncedLyrics || r.plainLyrics) ? { synced: r.syncedLyrics || '', plain: r.plainLyrics || '', instrumental: !!r.instrumental } : null;
+  try {
+    let found = null;
+    if (artist) {
+      const u = new URL('https://lrclib.net/api/get');
+      u.searchParams.set('track_name', title);
+      u.searchParams.set('artist_name', artist);
+      if (duration) u.searchParams.set('duration', String(duration));
+      const res = await fetch(u, { headers });
+      if (res.ok) found = pick(await res.json());
+    }
+    if (!found) {
+      const u = new URL('https://lrclib.net/api/search');
+      u.searchParams.set('q', (artist ? artist + ' ' : '') + title.replace(/\[[^\]]*\]|\([^)]*\)/g, ' '));
+      const res = await fetch(u, { headers });
+      const list = res.ok ? await res.json() : [];
+      const good = (Array.isArray(list) ? list : []).filter(r => r.syncedLyrics || r.plainLyrics);
+      good.sort((a, b) => (!!b.syncedLyrics - !!a.syncedLyrics) || (duration ? Math.abs(a.duration - duration) - Math.abs(b.duration - duration) : 0));
+      found = pick(good[0]);
+    }
+    const out = found || { error: 'No lyrics found for this song.' };
+    lyricsCache.set(key, out);
+    return out;
+  } catch (e) {
+    return { error: 'Could not load lyrics: ' + e.message };
+  }
+});
+
 ipcMain.handle('song-artist', (_e, song) => resolveSongArtist(song || {}).catch(() => ''));
 
 ipcMain.handle('song-cover', (_e, song) => {
