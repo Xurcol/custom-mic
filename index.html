@@ -385,6 +385,21 @@
     .sp-optional{margin:34px 0 10px;border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px 16px;background:rgba(255,255,255,.03)}
     .sp-optional summary{cursor:pointer;color:#b3b3b3;font-size:13px;font-weight:600}
     .sp-optional[open] summary{margin-bottom:12px}
+    .sp-artist-hero{position:relative;height:clamp(260px,42vh,400px);margin:-8px -24px 0;overflow:hidden;display:flex;align-items:flex-end;background:#1f1f1f;border-radius:8px 8px 0 0}
+    .sp-artist-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 22%;animation:sp-artist-in 1s cubic-bezier(.22,1,.36,1) both}
+    @keyframes sp-artist-in{from{transform:scale(1.06);opacity:.4}to{transform:none;opacity:1}}
+    .sp-artist-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.08) 0%,rgba(0,0,0,.12) 40%,rgba(0,0,0,.55) 80%,rgba(18,18,18,.92) 100%)}
+    .sp-artist-text{position:relative;padding:0 28px 26px;min-width:0}
+    .sp-artist-badge{font-size:13px;font-weight:700;color:#fff;letter-spacing:.02em;text-shadow:0 1px 8px rgba(0,0,0,.4)}
+    .sp-artist-hero h1{font-size:clamp(46px,6.6vw,96px);font-weight:900;letter-spacing:-.045em;line-height:.95;color:#fff;margin:6px 0 12px;text-shadow:0 4px 34px rgba(0,0,0,.35);overflow-wrap:anywhere}
+    .sp-artist-meta{font-size:15px;font-weight:500;color:#fff;text-shadow:0 1px 8px rgba(0,0,0,.4)}
+    .sp-artist-actions{display:flex;align-items:center;gap:24px;margin:24px 0 8px}
+    .sp-artist-shuffle{width:44px;height:44px;border:none;background:none;color:#b3b3b3;display:grid;place-items:center;cursor:pointer;border-radius:50%;transition:color .15s,transform .15s}
+    .sp-artist-shuffle svg{width:30px;height:30px}
+    .sp-artist-shuffle:hover{color:#fff;transform:scale(1.06)}
+    .sp-popular:not(.more) .sp-track:nth-child(n+7){display:none}
+    .sp-more{background:none;border:none;color:#b3b3b3;font-weight:700;font-size:14px;cursor:pointer;padding:10px 16px;margin-bottom:6px}
+    .sp-more:hover{color:#fff}
     .st-view.active{display:block;animation:st-view-in .28s cubic-bezier(.22,1,.36,1)}
     @keyframes st-view-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
     .st-title{font-size:32px;font-weight:800;letter-spacing:-.02em;padding:28px 0 18px;color:#fff}
@@ -2066,7 +2081,12 @@ async function catalogPlayContext(uri) {
       }
     } else if (kind === 'artist') {
       const market = spWeb.profile?.country || 'US';
-      tracks = (await spApi('GET', '/v1/artists/' + eid + '/top-tracks?market=' + encodeURIComponent(market)))?.tracks || [];
+      tracks = await spApi('GET', '/v1/artists/' + eid + '/top-tracks?market=' + encodeURIComponent(market)).then(d => d?.tracks || []).catch(() => []);
+      if (!tracks.length) {
+        const artist = await spApi('GET', '/v1/artists/' + eid).catch(() => null);
+        const dz = artist?.name ? await dzFindArtist(artist.name).catch(() => null) : null;
+        if (dz) tracks = ((await dzApi('/artist/' + dz.id + '/top?limit=50'))?.data || []).map(t => dzTrack(t)).filter(Boolean);
+      }
     } else if (kind === 'user' || kind === 'collection') {
       tracks = (await spAll('/v1/me/tracks?limit=50', 500)).map(i => i.track);
     }
@@ -3927,16 +3947,7 @@ async function dzOpen(el, kind, id, seq) {
         [who, (a.release_date || '').slice(0, 4), tracks.length + ' songs'].filter(Boolean).join(' · '), 'deezer:album:' + a.id);
       body = spTrackList('detail', tracks, { contextUri: 'deezer:album:' + a.id, showAlbum: false, showArt: false });
     } else if (kind === 'dz-artist') {
-      const [a, top, albums, related] = await Promise.all([
-        dzApi('/artist/' + eid),
-        dzApi('/artist/' + eid + '/top?limit=10').catch(() => null),
-        dzApi('/artist/' + eid + '/albums?limit=40').catch(() => null),
-        dzApi('/artist/' + eid + '/related?limit=12').catch(() => null),
-      ]);
-      hero = spHero(a.picture_big || a.picture_xl || '', 'Artist', a.name, a.nb_fan ? Number(a.nb_fan).toLocaleString() + ' fans' : '', 'deezer:artist:' + a.id, '', true);
-      body = ((top?.data || []).length ? '<h2 class="sp-h2">Popular</h2>' + spTrackList('detail', top.data.map(t => dzTrack(t)).filter(Boolean)) : '') +
-        spShelf('Discography', (albums?.data || []).map(x => dzAlbumTile(x, [(x.release_date || '').slice(0, 4), x.record_type].filter(Boolean).join(' · '))).join('')) +
-        spShelf('Fans also like', (related?.data || []).map(dzArtistTile).join(''));
+      ({ hero, body } = await spArtistData({ deezerId: id }));
     } else if (kind === 'dz-playlist') {
       const p = await dzApi('/playlist/' + eid);
       let raw = p.tracks?.data || [];
@@ -4124,6 +4135,85 @@ document.addEventListener('click', e => {
     if (shelf && !shelf.querySelector('.sp-tile')) shelf.remove();
   }, 230);
 }, true);
+
+// Artist pages look like Spotify's: photo banner, Popular, Discography and
+// "Fans also like". A Spotify developer app often can't read an artist's top
+// songs or albums, so anything Spotify doesn't return comes from the free
+// catalog, matched by the artist's name.
+async function dzFindArtist(name) {
+  const d = await dzApi('/search/artist?limit=10&q=' + encodeURIComponent(name));
+  const list = (d?.data || []).slice().sort((a, b) => (b.nb_fan || 0) - (a.nb_fan || 0));
+  const want = String(name || '').toLowerCase();
+  return list.find(a => a.name.toLowerCase() === want) || list[0] || null;
+}
+
+function spArtistHeader(img, name, meta, playUri) {
+  return '<header class="sp-artist-hero">' +
+      (img ? '<img class="sp-artist-bg" src="' + esc(img) + '" alt="">' : '') +
+      '<div class="sp-artist-shade"></div>' +
+      '<div class="sp-artist-text"><div class="sp-artist-badge">Artist</div><h1>' + esc(name) + '</h1>' +
+        (meta ? '<div class="sp-artist-meta">' + esc(meta) + '</div>' : '') + '</div>' +
+    '</header>' +
+    '<div class="sp-artist-actions">' +
+      '<button class="st-play-big sp-green" data-sp-hero-play="' + esc(playUri || '') + '" title="Play">' + ST_ICON_PLAY + '</button>' +
+      '<button class="sp-artist-shuffle" data-uri="' + esc(playUri || '') + '" onclick="catalog.shuffle = true; spPlayUri(this.dataset.uri)" title="Shuffle play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="m4 4 5 5"/></svg></button>' +
+    '</div>';
+}
+
+function spTogglePopular(btn) {
+  const more = btn.previousElementSibling.classList.toggle('more');
+  btn.textContent = more ? 'Show less' : 'See more';
+}
+
+async function spArtistData({ spotifyId, deezerId }) {
+  let name = '', img = '', meta = '', playUri = '', tracks = [], albumTiles = '', dz = null;
+  if (spotifyId) {
+    const eid = encodeURIComponent(spotifyId);
+    const a = await spApi('GET', '/v1/artists/' + eid);
+    name = a.name;
+    img = spImg(a.images, 640);
+    playUri = a.uri;
+    if (a.followers?.total) meta = Number(a.followers.total).toLocaleString() + ' followers';
+    const market = spWeb.profile?.country || 'US';
+    const [top, albums, found] = await Promise.all([
+      spApi('GET', '/v1/artists/' + eid + '/top-tracks?market=' + encodeURIComponent(market)).then(d => d?.tracks || []).catch(() => []),
+      spApi('GET', '/v1/artists/' + eid + '/albums?include_groups=album,single&limit=30').then(d => d?.items || []).catch(() => []),
+      dzFindArtist(a.name).catch(() => null),
+    ]);
+    dz = found;
+    tracks = top.slice(0, 10);
+    albumTiles = albums.map(x => spTile('album:' + x.id, x.uri, spImg(x.images, 300), x.name,
+      [(x.release_date || '').slice(0, 4), x.album_type].filter(Boolean).join(' · '))).join('');
+  } else {
+    dz = await dzApi('/artist/' + encodeURIComponent(deezerId));
+    name = dz.name;
+  }
+  let relatedTiles = '';
+  if (dz) {
+    const [top, albums, related] = await Promise.all([
+      tracks.length ? null : dzApi('/artist/' + dz.id + '/top?limit=10').catch(() => null),
+      albumTiles ? null : dzApi('/artist/' + dz.id + '/albums?limit=40').catch(() => null),
+      dzApi('/artist/' + dz.id + '/related?limit=12').catch(() => null),
+    ]);
+    if (!tracks.length) {
+      tracks = (top?.data || []).map(t => dzTrack(t)).filter(Boolean);
+      if (tracks.length) playUri = 'deezer:artist:' + dz.id;
+    }
+    if (!albumTiles) albumTiles = (albums?.data || []).map(x => dzAlbumTile(x, [(x.release_date || '').slice(0, 4), x.record_type].filter(Boolean).join(' · '))).join('');
+    relatedTiles = (related?.data || []).map(dzArtistTile).join('');
+    if (!img) img = dz.picture_xl || dz.picture_big || '';
+    if (!meta && dz.nb_fan) meta = Number(dz.nb_fan).toLocaleString() + ' fans';
+    if (!playUri) playUri = 'deezer:artist:' + dz.id;
+  }
+  const hero = spArtistHeader(img, name, meta, playUri);
+  const body = (tracks.length
+      ? '<h2 class="sp-h2">Popular</h2><div class="sp-popular">' + spTrackList('detail', tracks) + '</div>' +
+        (tracks.length > 5 ? '<button class="sp-more" onclick="spTogglePopular(this)">See more</button>' : '')
+      : '<div class="sp-empty">No songs found for this artist.</div>') +
+    spShelf('Discography', albumTiles) +
+    spShelf('Fans also like', relatedTiles);
+  return { hero, body };
+}
 
 /* ── pages ── */
 
@@ -4316,17 +4406,7 @@ async function spOpen(target) {
         a.uri);
       body = spTrackList('detail', tracks, { contextUri: a.uri, showAlbum: false, showArt: false });
     } else if (kind === 'artist') {
-      const market = spWeb.profile?.country || 'US';
-      const [a, top, albums] = await Promise.all([
-        spApi('GET', '/v1/artists/' + eid),
-        spApi('GET', '/v1/artists/' + eid + '/top-tracks?market=' + encodeURIComponent(market)).catch(() => null),
-        spApi('GET', '/v1/artists/' + eid + '/albums?include_groups=album,single&limit=20').catch(() => null),
-      ]);
-      hero = spHero(spImg(a.images, 300), 'Artist', a.name,
-        a.followers?.total ? Number(a.followers.total).toLocaleString() + ' followers' : '', a.uri, '', true);
-      body = (top?.tracks?.length ? `<h2 class="sp-h2">Popular</h2>${spTrackList('detail', top.tracks.slice(0, 10))}` : '') +
-        spShelf('Discography', (albums?.items || []).map(x => spTile('album:' + x.id, x.uri, spImg(x.images, 300), x.name,
-          [(x.release_date || '').slice(0, 4), x.album_type].filter(Boolean).join(' · '))).join(''));
+      ({ hero, body } = await spArtistData({ spotifyId: id }));
     } else if (kind === 'liked') {
       const items = await spAll('/v1/me/tracks?limit=50', 500);
       hero = spHero('', 'Playlist', 'Liked Songs', (spWeb.profile?.display_name || 'You') + ' · ' + items.length + ' songs', '', '', false, true);
