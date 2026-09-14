@@ -1169,7 +1169,9 @@ function runSpotifyRoute(args, sync) {
 async function pickSilentDevice() {
   let list = [];
   try { list = JSON.parse(await runSpotifyRoute(['-List'])); } catch { return null; }
-  const score = d => /dummy|null output|no output/i.test(d.name) ? 3 : /steam streaming speakers/i.test(d.name) ? 2 : 0;
+  // Steam's streaming speakers keep a proper real-time clock; dummy outputs
+  // (e.g. Voicemod's) can pace audio unevenly, which degrades the capture.
+  const score = d => /steam streaming speakers/i.test(d.name) ? 3 : /dummy|null output|no output/i.test(d.name) ? 2 : 0;
   return list.map(d => ({ ...d, s: score(d) })).filter(d => d.s > 0).sort((a, b) => b.s - a.s)[0] || null;
 }
 
